@@ -24,6 +24,8 @@ import {
   deleteSession as deleteSessionInFirebase,
 } from './lib/sessions'
 import { saveProfile as saveUserToFirebase } from './lib/users'
+import { saveAccount, deleteAccount } from './accountData'
+import { forgetOnboarded } from './currentUser'
 import Home from './pages/Home'
 import StudyBuddies from './pages/StudyBuddies'
 import StudySessions from './pages/StudySessions'
@@ -54,21 +56,21 @@ function loadPhone() {
 // Keep the student's classes after a reload: update the profile saved in
 // this browser and the "users" record in Firebase (stored as a list, so
 // they show up as courses 0, 1, 2… in the console).
-function persistCourses(courses) {
-  let saved = null
+function persistCourses(courses, accountId, previousList = []) {
+  const previous = new Map(
+    previousList.map((course) => (typeof course === 'string' ? [course, { code: course }] : [course.code, course])),
+  )
+  const list = courses.map((code) => ({ professor: '', ...(previous.get(code) || {}), code }))
+  saveAccount(accountId, { courses: list })
   try {
-    saved = JSON.parse(window.localStorage.getItem(ONBOARDING_KEY) || 'null')
-  } catch {
-    saved = null
-  }
-  const previous = new Map((saved?.courses || []).map((course) => [course.code, course]))
-  const list = courses.map((code) => previous.get(code) || { code, professor: '' })
-  try {
+    // Older code reads this single record too.
+    const saved = JSON.parse(window.localStorage.getItem(ONBOARDING_KEY) || 'null')
     window.localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ ...(saved || {}), courses: list }))
   } catch {
     // Storage blocked: Firebase still gets the update below.
   }
   saveUserToFirebase({ courses: list }).catch((error) => console.error('Could not save courses to Firebase', error))
+  return list
 }
 
 // Settings are remembered in this browser. Storage can be unavailable
@@ -90,10 +92,18 @@ function storeSettings(settings) {
   }
 }
 
-export default function MainApp({ user = DEMO_USER, courses: initialCourses = DEMO_COURSES, onLogout }) {
+export default function MainApp({
+  user = DEMO_USER,
+  courses: initialCourses = DEMO_COURSES,
+  accountId = '',
+  account = null,
+  onLogout,
+}) {
   const [page, setPage] = useState('home')
   const [currentUser, setCurrentUser] = useState(user)
-  const [profile, setProfile] = useState(EMPTY_PROFILE)
+  // Profile, settings and phone come back from this account's saved record.
+  const [profile, setProfile] = useState(() => ({ ...EMPTY_PROFILE, ...(account?.profile || {}) }))
+  const courseRecords = useRef(account?.courses || [])
   const [courses, setCourses] = useState(initialCourses)
   // Sessions come live from Firebase. Until it answers the list is empty;
   // if it can't be reached we fall back to the sample sessions.
@@ -113,9 +123,12 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
   // Joining asks for a phone number first.
   const [joiningId, setJoiningId] = useState(null)
   const joining = sessions.find((session) => session.id === joiningId)
-  const [savedPhone, setSavedPhone] = useState(loadPhone)
+  const [savedPhone, setSavedPhone] = useState(() => (account ? account.phone || '' : loadPhone()))
   const [toast, setToast] = useState(null)
-  const [settings, setSettings] = useState(loadSettings)
+  // Each account has its own settings; only pre-account browsers use the shared copy.
+  const [settings, setSettings] = useState(() =>
+    account ? { ...DEFAULT_SETTINGS, ...(account.settings || {}) } : loadSettings(),
+  )
   const [settingsDialog, setSettingsDialog] = useState(null) // 'reset' | 'delete'
 
   // Dark mode and reduced motion only apply inside the main app, so the
@@ -229,18 +242,24 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
       coursesLoaded.current = true
       return
     }
-    persistCourses(courses)
-  }, [courses])
+    courseRecords.current = persistCourses(courses, accountId, courseRecords.current)
+  }, [courses, accountId])
+
+  // Keep this account's record up to date so it all comes back after logging in again.
+  const deletedRef = useRef(false)
+  useEffect(() => {
+    if (deletedRef.current) return
+    saveAccount(accountId, { name: currentUser, profile, settings, phone: savedPhone })
+  }, [accountId, currentUser, profile, settings, savedPhone])
 
   const conflictsFor = (session) => findConflicts(session, visibleSessions, currentUser)
   const pendingJoin = sessions.find((session) => session.id === conflictId)
   const pendingConflicts = pendingJoin ? conflictsFor(pendingJoin) : []
   const openSession = sessions.find((session) => session.id === openId)
 
+  // Logging out keeps everything saved for next time.
   function logout() {
     setSettingsDialog(null)
-    setProfile(EMPTY_PROFILE)
-    setCurrentUser(user)
     setSessionsTab('all')
     setOpenId(null)
     setConflictId(null)
@@ -292,6 +311,10 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
       setCurrentUser(name)
     }
     setProfile(details)
+    const { photo, ...shareable } = details
+    saveUserToFirebase({ name, ...shareable, hasPhoto: Boolean(photo) }).catch((error) =>
+      console.error('Could not save profile to Firebase', error),
+    )
   }
 
   // Remember the last phone number used, here and on the user's record.
@@ -589,7 +612,18 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
         illustration={<SleepScene />}
         onCancel={() => setSettingsDialog(null)}
         onConfirm={() => {
-          setSettings(DEFAULT_SETTINGS)
+          // Erase this account's saved data so it doesn't come back next time.
+          deletedRef.current = true
+          const email = (profile.email || account?.email || '').toLowerCase()
+          deleteAccount(accountId)
+          if (email) deleteAccount(email)
+          forgetOnboarded(accountId, email)
+          try {
+            window.localStorage.removeItem(ONBOARDING_KEY)
+            window.localStorage.removeItem(PHONE_KEY)
+          } catch {
+            // Nothing to remove.
+          }
           logout()
         }}
       />

@@ -3,14 +3,20 @@ import Login from './Login.jsx'
 import Onboarding from './onboarding/Onboarding.jsx'
 import MainApp from './MainApp.jsx'
 import { getCurrentUser, clearCurrentUser, isOnboarded } from './currentUser'
+import { loadAccount, legacyOnboarding, profileFromOnboarding } from './accountData'
 
-// Name and classes saved by onboarding (Onboarding.jsx stores them here).
-function onboardingProfile() {
-  try {
-    return JSON.parse(localStorage.getItem('zotstudy-onboarding') || 'null')
-  } catch {
-    return null
+// The saved data for whoever signed in. Older browsers only have the single
+// onboarding record, so use that if it belongs to this person.
+function accountFor(signedIn) {
+  const saved = loadAccount(signedIn.id) || (signedIn.email ? loadAccount(signedIn.email.toLowerCase()) : null)
+  if (saved) return saved
+  const legacy = legacyOnboarding()
+  if (!legacy) return null
+  const sameEmail = signedIn.email && legacy.email?.toLowerCase() === signedIn.email.toLowerCase()
+  if (sameEmail || !signedIn.email) {
+    return { ...legacy, profile: profileFromOnboarding(legacy) }
   }
+  return null
 }
 
 // The main app greets whoever signed in (login page or onboarding) and
@@ -21,14 +27,17 @@ function MainAppRoute() {
   // Only signed-in students who finished onboarding can open the app.
   if (!signedIn) return <Navigate to="/" replace />
   if (!isOnboarded(signedIn)) return <Navigate to="/signup" replace />
-  const saved = onboardingProfile()
-  const props = {}
-  const name = signedIn?.name?.trim() || saved?.name?.trim()
+  const account = accountFor(signedIn)
+  const props = { accountId: signedIn.id, account }
+  // Prefer the name they chose (onboarding or Edit Profile) over a login username.
+  const name = account?.name?.trim() || signedIn?.name?.trim()
   if (name) props.user = name
-  const courses = (saved?.courses || []).map((course) => course.code).filter(Boolean)
-  if (Array.isArray(saved?.courses)) props.courses = courses
+  if (Array.isArray(account?.courses)) {
+    props.courses = account.courses.map((course) => (typeof course === 'string' ? course : course.code)).filter(Boolean)
+  }
   return (
     <MainApp
+      key={signedIn.id}
       {...props}
       onLogout={() => {
         clearCurrentUser()

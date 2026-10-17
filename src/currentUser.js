@@ -68,6 +68,12 @@ export function markOnboarded(...users) {
   write(ONBOARDED_KEY, [...done])
 }
 
+// Forget that an account finished onboarding (used by Delete Account).
+export function forgetOnboarded(...ids) {
+  const remove = new Set(ids.filter(Boolean))
+  write(ONBOARDED_KEY, read(ONBOARDED_KEY, []).filter((id) => !remove.has(id)))
+}
+
 // Where to go right after signing in.
 export function homeFor(user) {
   return isOnboarded(user) ? '/home' : '/signup'

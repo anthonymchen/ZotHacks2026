@@ -5,6 +5,7 @@ import { saveProfile } from '../lib/users'
 import { setCurrentUser, getCurrentUser, markOnboarded } from '../currentUser'
 import CourseSearch from '../components/CourseSearch'
 import { findCourse } from '../lib/uciCourses'
+import { loadAccount, saveAccount, profileFromOnboarding } from '../accountData'
 
 
 const MAJORS = [
@@ -217,7 +218,25 @@ export default function Onboarding() {
     const signedIn = getCurrentUser()
     const email = profile.email.trim()
     markOnboarded(signedIn, email.toLowerCase())
-    setCurrentUser({ name: profile.name.trim(), email, id: signedIn?.id || email.toLowerCase() })
+    const accountId = signedIn?.id || email.toLowerCase()
+    setCurrentUser({ name: profile.name.trim(), email, id: accountId })
+    // Remember everything for this account (and for the email, so a later
+    // Google sign-in with it finds the same data).
+    const record = {
+      name: profile.name.trim(),
+      email,
+      major: profile.major,
+      year: profile.year,
+      courses: profile.courses,
+      styles: profile.styles,
+    }
+    ;[accountId, email.toLowerCase()].forEach((id) => {
+      const existing = loadAccount(id)
+      saveAccount(id, {
+        ...record,
+        profile: { ...(existing?.profile || {}), ...profileFromOnboarding(record) },
+      })
+    })
     // Show "You're all set!" for a moment, then open the main app.
     setTimeout(() => navigate('/home'), 900)
   }
