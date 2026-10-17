@@ -63,7 +63,18 @@ export default function Onboarding() {
       return
     }
 
-      function addCourse() {
+    const profile = {
+      ...form,
+      name: form.name.trim(),
+      email: form.email.trim(),
+      step: 'student-info',
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(profile))
+    console.log('Onboarding student info', profile)
+    setStep(2)
+  }
+
+  function addCourse() {
     const code = courseInput.code.trim().toUpperCase().replace(/\s+/g, ' ')
     if (!code) {
       setCourseError('Enter a course code, like MATH 2A')
@@ -223,10 +234,100 @@ export default function Onboarding() {
               Continue
             </button>
 
-          </form>
+                    </form>
         </>
         )}
-        
+
+        {step === 2 && (
+          <>
+            <h2>Your classes</h2>
+            <p className="onboarding-sub">
+              Add the courses you want study partners for.
+            </p>
+
+            <form className="onboarding-form" onSubmit={handleClassesSubmit} noValidate>
+              <div className="onboarding-row">
+                <label>
+                  <span>Course <span className="required" aria-hidden="true">*</span></span>
+                  <input
+                    type="text"
+                    placeholder="MATH 2A"
+                    value={courseInput.code}
+                    onChange={(e) => {
+                      setCourseInput((prev) => ({ ...prev, code: e.target.value }))
+                      setCourseError('')
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        addCourse()
+                      }
+                    }}
+                  />
+                </label>
+
+                <label>
+                  Professor (optional)
+                  <input
+                    type="text"
+                    placeholder="Last name"
+                    value={courseInput.professor}
+                    onChange={(e) =>
+                      setCourseInput((prev) => ({ ...prev, professor: e.target.value }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        addCourse()
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+
+              {courseError && <span className="field-error">{courseError}</span>}
+
+              <button type="button" className="onboarding-add" onClick={addCourse}>
+                Add class
+              </button>
+
+              {form.courses.length > 0 && (
+                <ul className="course-list">
+                  {form.courses.map((c) => (
+                    <li key={c.code}>
+                      <span>
+                        <strong>{c.code}</strong>
+                        {c.professor && ` · ${c.professor}`}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${c.code}`}
+                        onClick={() => removeCourse(c.code)}
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="onboarding-actions">
+                <button type="button" className="onboarding-back" onClick={() => setStep(1)}>
+                  Back
+                </button>
+                <button type="submit" className="onboarding-next">
+                  Continue
+                </button>
+              </div>
+
+              {saved && (
+                <p className="onboarding-saved" role="status">
+                  Classes saved. Study style comes next.
+                </p>
+              )}
+            </form>
+          </>
+        )}
       </section>
     </main>
   )
