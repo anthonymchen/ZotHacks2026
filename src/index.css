@@ -1,111 +1,141 @@
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* Brand palette */
+  --navy: #0c2340;
+  --navy-soft: #16365c;
+  --gold: #ffc72c;
+  --cream: #f6f1e6;
+  --ink: #122033;
+  --muted: #5b6b7c;
+  --line: #d9e0ea;
+  --danger: #b42318;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  /* Tints derived from the palette */
+  --navy-tint: #e8edf4;
+  --gold-tint: #fff4d1;
+  --cream-deep: #eee6d3;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
+  /* Surfaces and lines that change with the theme */
+  --surface: #ffffff;
+  --muted-surface: #f3f5f8;
+  --brand-text: var(--navy);
+  --brand-soft-text: var(--navy-soft);
+  --gold-line: #f5e2a6;
+  --gold-tint-hover: #fdeebf;
+  --navy-line: #cfd8e4;
+  --muted-line: #c3cbd6;
+  --danger-tint: #fbe7e5;
+  --danger-line: #f1c4bf;
+  --on-accent: #ffffff;
+  --accent-hover: var(--navy-soft);
+  --sidebar-bg: var(--navy);
+  color-scheme: light;
+
+  /* Semantic aliases used across the app */
+  --text: var(--muted);
+  --text-h: var(--ink);
+  --bg: var(--cream);
+  --panel: #ffffff;
+  --border: var(--line);
+  --accent: var(--navy);
+  --accent-soft: var(--navy-tint);
+  --sans: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
+  --display: 'Bricolage Grotesque', 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
+  font: 16px/145% var(--sans);
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  min-height: 100svh;
+  background: var(--bg);
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
   min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
 }
 
 h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
+h2,
+h3,
 p {
   margin: 0;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+button,
+input,
+select {
+  font: inherit;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+button {
+  cursor: pointer;
+}
+
+svg {
+  fill: currentColor;
+}
+
+/* Plain text isn't editable: hide the blinking text cursor and stop
+   click-selecting words everywhere except real form fields. */
+body {
+  caret-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input,
+textarea,
+select {
+  caret-color: auto;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* ---------- Dark mode ---------- */
+:root[data-theme='dark'] {
+  --cream: #0a1422;
+  --cream-deep: #182a43;
+  --ink: #eef2f8;
+  --muted: #a3b2c5;
+  --line: #2a3f5e;
+  --navy-tint: #1c3150;
+  --gold-tint: #3a3116;
+  --gold-tint-hover: #4a3e1a;
+  --gold-line: #6b5a22;
+  --navy-line: #31507a;
+  --muted-line: #3a5070;
+  --danger-tint: #3b1a19;
+  --danger-line: #7a2b25;
+  --surface: #172a44;
+  --muted-surface: #101d30;
+  --panel: #12223a;
+  --brand-text: #eef2f8;
+  --brand-soft-text: #c9d6e8;
+  --danger: #ff8b80;
+  --accent: var(--gold);
+  --accent-soft: #1c3150;
+  --on-accent: var(--navy);
+  --accent-hover: #ffd65c;
+  --sidebar-bg: #07101d;
+  --text: var(--muted);
+  --text-h: var(--ink);
+  --bg: var(--cream);
+  --border: var(--line);
+  color-scheme: dark;
+}
+
+/* Turn off animations when the user asks for less motion */
+:root[data-motion='reduce'] *,
+:root[data-motion='reduce'] *::before,
+:root[data-motion='reduce'] *::after {
+  animation: none !important;
+  transition: none !important;
 }
