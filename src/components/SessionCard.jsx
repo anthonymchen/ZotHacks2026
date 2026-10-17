@@ -1,5 +1,5 @@
 import { formatSessionWhen, initials } from '../time'
-import { isFull, describeConflicts, waitlistPosition } from '../sessions'
+import { isFull, describeConflicts, waitlistPosition } from '../sessions.js'
 
 export default function SessionCard({
   session,

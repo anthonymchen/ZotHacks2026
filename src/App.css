@@ -561,9 +561,9 @@
   cursor: default;
 }
 
-button:focus-visible,
-input:focus-visible,
-select:focus-visible {
+:where(:root[data-theme]) button:focus-visible,
+:where(:root[data-theme]) input:focus-visible,
+:where(:root[data-theme]) select:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -628,14 +628,14 @@ select:focus-visible {
   border-color: var(--navy);
 }
 
-button:focus-visible,
-input:focus-visible,
-select:focus-visible {
+:where(:root[data-theme]) button:focus-visible,
+:where(:root[data-theme]) input:focus-visible,
+:where(:root[data-theme]) select:focus-visible {
   outline-color: var(--gold);
 }
 
-input:focus,
-select:focus {
+:where(:root[data-theme]) input:focus,
+:where(:root[data-theme]) select:focus {
   border-color: var(--navy);
 }
 
@@ -960,9 +960,9 @@ select:focus {
 }
 
 /* ---------- Typography & UCI-inspired details ---------- */
-h1,
-h2,
-h3,
+:where(.app-shell) h1,
+:where(.app-shell) h2,
+:where(.app-shell) h3,
 .action-card strong,
 .dialog h2 {
   font-family: var(--display);

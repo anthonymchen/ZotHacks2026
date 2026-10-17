@@ -28,7 +28,6 @@
   --on-accent: #ffffff;
   --accent-hover: var(--navy-soft);
   --sidebar-bg: var(--navy);
-  color-scheme: light;
 
   /* Semantic aliases used across the app */
   --text: var(--muted);
@@ -40,6 +39,13 @@
   --accent-soft: var(--navy-tint);
   --sans: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
   --display: 'Bricolage Grotesque', 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* The rules below only apply while the main app is open (it sets
+   data-theme on <html>), so the login and onboarding pages keep their
+   own styles. :where() keeps these as easy to override as plain tags. */
+:where(:root[data-theme]) {
+  color-scheme: light;
   font: 16px/145% var(--sans);
   color: var(--text);
   background: var(--bg);
@@ -52,48 +58,48 @@
   box-sizing: border-box;
 }
 
-body {
+:where(:root[data-theme]) body {
   margin: 0;
   min-height: 100svh;
   background: var(--bg);
 }
 
-#root {
+:where(:root[data-theme]) #root {
   min-height: 100svh;
 }
 
-h1,
-h2,
-h3,
-p {
+:where(:root[data-theme]) h1,
+:where(:root[data-theme]) h2,
+:where(:root[data-theme]) h3,
+:where(:root[data-theme]) p {
   margin: 0;
 }
 
-button,
-input,
-select {
+:where(:root[data-theme]) button,
+:where(:root[data-theme]) input,
+:where(:root[data-theme]) select {
   font: inherit;
 }
 
-button {
+:where(:root[data-theme]) button {
   cursor: pointer;
 }
 
-svg {
+:where(:root[data-theme]) svg {
   fill: currentColor;
 }
 
 /* Plain text isn't editable: hide the blinking text cursor and stop
    click-selecting words everywhere except real form fields. */
-body {
+:where(:root[data-theme]) body {
   caret-color: transparent;
   user-select: none;
   -webkit-user-select: none;
 }
 
-input,
-textarea,
-select {
+:where(:root[data-theme]) input,
+:where(:root[data-theme]) textarea,
+:where(:root[data-theme]) select {
   caret-color: auto;
   user-select: text;
   -webkit-user-select: text;

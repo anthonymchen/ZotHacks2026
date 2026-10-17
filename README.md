@@ -1,20 +1,106 @@
-<<<<<<< HEAD
-# React + Vite
+# ZotStudy 📚
+### Find your people. Study together.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**ZotHacks 2026 | UC Irvine**
 
-Currently, two official plugins are available:
+ZotStudy is a web application that helps UCI students discover, create, and join study sessions with other students taking the same courses.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Whether you're preparing for a midterm, working through homework, or looking for a study group, ZotStudy makes it easier to connect with classmates and collaborate.
 
-## React Compiler
+## 🚀 Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Find Study Sessions:** Search for sessions by course, location, and time.
+- **Live & Upcoming Sessions:** Discover sessions happening now or scheduled for later.
+- **Create Sessions:** Organize a study session by choosing a course, location, time, and study style.
+- **Join Sessions:** Join existing sessions and see how many students are attending.
+- **Smart Filters:** Filter sessions by study style and professor.
+- **User Authentication:** Firebase Authentication for managing users.
+- **Real-Time Data:** Firebase Firestore for storing and managing study sessions.
 
-## Expanding the ESLint configuration
+## 🛠️ Tech Stack
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-=======
-# ZotHacks2026
->>>>>>> 0cc042f20567950f26425b9af83f0c3d2d774939
+| Technology | Purpose |
+|---|---|
+| React | Frontend user interface |
+| Vite | Development and build tool |
+| JavaScript | Application logic |
+| CSS | Styling and responsive design |
+| React Router | Page navigation |
+| Firebase Authentication | User authentication |
+| Cloud Firestore | Database |
+| Vercel | Deployment |
+
+## 💻 Getting Started
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/anthonymchen/ZotHacks2026.git
+cd ZotHacks2026
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Configure Firebase
+
+Create a `.env` file in the project root and add the Firebase configuration values required by the app. Obtain these values from the project's Firebase administrator.
+
+### 4. Start the development server
+
+```bash
+npm run dev
+```
+
+Open the local URL shown in your terminal to view the application.
+
+## 📱 How It Works
+
+1. **Search:** Enter your course, such as `MATH 2A`, to discover relevant sessions.
+2. **Explore:** Browse live and upcoming study sessions.
+3. **Filter:** Narrow results by location, study style, or professor.
+4. **Join:** Choose a session and join other students.
+5. **Create:** Host your own session and invite classmates to study together.
+
+## 👥 Team Contributions
+
+**Hacker 1 — Homepage & UI**
+- Homepage layout and search functionality
+- Live and upcoming session displays
+- Session cards and styling
+
+**Hacker 2 — Forms & Filters**
+- Study session creation form
+- Input validation
+- Session filters and join functionality
+
+**Hacker 3 — Firebase & Authentication**
+- Firebase project setup
+- Firestore database integration
+- Authentication and session management
+
+**Hacker 4 — Integration & Deployment**
+- React Router configuration
+- Mock session data
+- Frontend and backend integration
+- GitHub collaboration and Vercel deployment
+- End-to-end testing
+
+## 🔮 Future Improvements
+
+- Personalized study session recommendations
+- In-app messaging between attendees
+- Notifications for upcoming sessions
+- Campus map integration for study locations
+- Recurring study groups
+
+## 🏆 Built For
+
+**ZotHacks 2026 — University of California, Irvine**
+
+Built by UCI students to make studying more collaborative, accessible, and connected.
+
+*Find a session. Meet your classmates. Study smarter.*

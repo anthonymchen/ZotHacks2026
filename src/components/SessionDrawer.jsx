@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import Avatar from './Avatar'
 import { formatSessionWhen } from '../time'
-import { isFull, describeConflicts, waitlistPosition } from '../sessions'
+import { isFull, describeConflicts, waitlistPosition } from '../sessions.js'
 import { STUDY_BUDDIES } from '../data'
 
 // Look up a little more about an attendee (full name, study style) when we have it.

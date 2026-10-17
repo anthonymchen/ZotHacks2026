@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { LOCATIONS, STYLES, MAX_GROUP_SIZE } from '../data'
-import { validateSession, overlaps, describeConflicts } from '../sessions'
+import { validateSession, overlaps, describeConflicts } from '../sessions.js'
 import { formatSessionWhen } from '../time'
 import PageBanner from '../components/PageBanner'
 import SessionCard from '../components/SessionCard'

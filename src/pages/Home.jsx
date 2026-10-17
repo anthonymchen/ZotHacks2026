@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Avatar from '../components/Avatar'
-import { filterSessions, courseOptions } from '../sessions'
+import { filterSessions, courseOptions } from '../sessions.js'
 import { BuddiesIcon, SessionsIcon } from '../components/Icons'
 import SessionCard from '../components/SessionCard'
 import SessionFilters from '../components/SessionFilters'

@@ -3,7 +3,7 @@ import SessionFilters from '../components/SessionFilters'
 import EmptyState from '../components/EmptyState'
 import PageBanner from '../components/PageBanner'
 import { BooksScene } from '../components/Scenes'
-import { filterSessions, courseOptions } from '../sessions'
+import { filterSessions, courseOptions } from '../sessions.js'
 
 export default function StudySessions({
   currentUser,
