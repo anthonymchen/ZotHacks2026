@@ -4,7 +4,7 @@ import { FcGoogle } from 'react-icons/fc'
 import { useGoogleLogin } from '@react-oauth/google'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import { setCurrentUser } from './currentUser'
+import { setCurrentUser, getCurrentUser, homeFor } from './currentUser'
 
 function Login() {
   const navigate = useNavigate()
@@ -28,7 +28,8 @@ function Login() {
     }
     setLoginError('')
     setCurrentUser({ name })
-    navigate('/home')
+    // New accounts finish the 3 onboarding steps before entering the app.
+    navigate(homeFor(getCurrentUser()))
   }
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -54,8 +55,8 @@ function Login() {
         }
 
         console.log('Logged in as', user.name, user.email)
-        setCurrentUser({ name: user.given_name || user.name, email: user.email })
-        navigate('/home')
+        setCurrentUser({ name: user.given_name || user.name, fullName: user.name, email: user.email })
+        navigate(homeFor(getCurrentUser()))
       } catch (error) {
         console.error(error)
         alert('Google login failed')

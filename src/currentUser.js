@@ -1,21 +1,43 @@
-// Who is signed in: set by the login page (username or Google) and by
-// onboarding, read by the main app to greet the student by name.
+// Who is signed in, and whether they've finished onboarding.
+// Set by the login page (username or Google) and by onboarding; read by
+// App.jsx to decide whether someone may open the main app.
 const KEY = 'zotstudy-current-user'
+const ONBOARDED_KEY = 'zotstudy-onboarded'
+const ONBOARDING_KEY = 'zotstudy-onboarding' // saved by Onboarding.jsx
 
-export function setCurrentUser(user) {
+function read(key, fallback) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(user))
+    const value = JSON.parse(localStorage.getItem(key) || 'null')
+    return value ?? fallback
   } catch {
-    // Storage can be blocked; the app falls back to a placeholder name.
+    return fallback
   }
 }
 
-export function getCurrentUser() {
+function write(key, value) {
   try {
-    return JSON.parse(localStorage.getItem(KEY) || 'null')
+    localStorage.setItem(key, JSON.stringify(value))
   } catch {
-    return null
+    // Storage can be blocked; the app still works for this visit.
   }
+}
+
+// A stable ID for an account: the email when we have one, otherwise the
+// username typed on the login page.
+function idFor(user) {
+  if (!user) return ''
+  if (user.id) return user.id
+  if (user.email) return user.email.trim().toLowerCase()
+  if (user.name) return `user:${user.name.trim().toLowerCase()}`
+  return ''
+}
+
+export function setCurrentUser(user) {
+  write(KEY, { ...user, id: idFor(user) })
+}
+
+export function getCurrentUser() {
+  return read(KEY, null)
 }
 
 export function clearCurrentUser() {
@@ -24,4 +46,29 @@ export function clearCurrentUser() {
   } catch {
     // Nothing to clear.
   }
+}
+
+// Has this account finished all 3 onboarding steps?
+export function isOnboarded(user) {
+  const id = idFor(user)
+  if (!id) return false
+  if (read(ONBOARDED_KEY, []).includes(id)) return true
+  // Someone who finished onboarding before this check existed.
+  const saved = read(ONBOARDING_KEY, null)
+  return Boolean(saved?.onboarded && user?.email && saved.email?.trim().toLowerCase() === user.email.trim().toLowerCase())
+}
+
+// Remember that these account IDs have finished onboarding.
+export function markOnboarded(...users) {
+  const done = new Set(read(ONBOARDED_KEY, []))
+  users.forEach((user) => {
+    const id = typeof user === 'string' ? user : idFor(user)
+    if (id) done.add(id)
+  })
+  write(ONBOARDED_KEY, [...done])
+}
+
+// Where to go right after signing in.
+export function homeFor(user) {
+  return isOnboarded(user) ? '/home' : '/signup'
 }

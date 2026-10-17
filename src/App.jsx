@@ -1,8 +1,8 @@
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import Login from './Login.jsx'
 import Onboarding from './onboarding/Onboarding.jsx'
 import MainApp from './MainApp.jsx'
-import { getCurrentUser, clearCurrentUser } from './currentUser'
+import { getCurrentUser, clearCurrentUser, isOnboarded } from './currentUser'
 
 // Name and classes saved by onboarding (Onboarding.jsx stores them here).
 function onboardingProfile() {
@@ -18,6 +18,9 @@ function onboardingProfile() {
 function MainAppRoute() {
   const navigate = useNavigate()
   const signedIn = getCurrentUser()
+  // Only signed-in students who finished onboarding can open the app.
+  if (!signedIn) return <Navigate to="/" replace />
+  if (!isOnboarded(signedIn)) return <Navigate to="/signup" replace />
   const saved = onboardingProfile()
   const props = {}
   const name = signedIn?.name?.trim() || saved?.name?.trim()

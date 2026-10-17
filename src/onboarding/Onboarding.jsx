@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Onboarding.css'
 import { saveProfile } from '../lib/users'
-import { setCurrentUser } from '../currentUser'
+import { setCurrentUser, getCurrentUser, markOnboarded } from '../currentUser'
 
 
 const MAJORS = [
@@ -37,7 +37,18 @@ const STYLES = [
 
 export default function Onboarding() {
   const navigate = useNavigate()
-  const [form, setForm] = useState({ name: '', email: '', major: '', year: '', courses: [], styles: [] })
+  // If they signed in with Google, start with their name and email filled in.
+  const [form, setForm] = useState(() => {
+    const signedIn = getCurrentUser()
+    return {
+      name: signedIn?.fullName || '',
+      email: signedIn?.email || '',
+      major: '',
+      year: '',
+      courses: [],
+      styles: [],
+    }
+  })
   const [errors, setErrors] = useState({})
   const [saved, setSaved] = useState(false)
   const [step, setStep] = useState(1)
@@ -180,7 +191,12 @@ export default function Onboarding() {
     }
 
     setSaved(true)
-    setCurrentUser({ name: profile.name.trim(), email: profile.email.trim() })
+    // Mark this account as onboarded so it can open the main app, both for
+    // the login it came from and for the email entered here.
+    const signedIn = getCurrentUser()
+    const email = profile.email.trim()
+    markOnboarded(signedIn, email.toLowerCase())
+    setCurrentUser({ name: profile.name.trim(), email, id: signedIn?.id || email.toLowerCase() })
     // Show "You're all set!" for a moment, then open the main app.
     setTimeout(() => navigate('/home'), 900)
   }
