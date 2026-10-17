@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Onboarding.css'
 import { saveProfile } from '../lib/users'
 import { setCurrentUser, getCurrentUser, markOnboarded } from '../currentUser'
 import CourseSearch from '../components/CourseSearch'
-import { findCourse } from '../lib/uciCourses'
+import { findCourse, getCourseInstructors } from '../lib/uciCourses'
 import { loadAccount, saveAccount, profileFromOnboarding } from '../accountData'
 
 
@@ -38,6 +38,16 @@ const STYLES = [
   { value: 'practice', label: 'Practice', hint: 'Problem sets and past exams' },
 ]
 
+function resolveInstructor(typed, names) {
+  const t = typed.trim().toLowerCase()
+  const exact = names.find((n) => n.toLowerCase() === t)
+  if (exact) return exact
+  const byLast = names.filter(
+    (n) => n.trim().split(/\s+/).slice(-1)[0].toLowerCase() === t,
+  )
+  return byLast.length === 1 ? byLast[0] : null
+}
+
 export default function Onboarding() {
   const navigate = useNavigate()
   // If they signed in with Google, start with their name and email filled in.
@@ -58,7 +68,30 @@ export default function Onboarding() {
   const [courseInput, setCourseInput] = useState({ code: '', professor: '' })
   const [courseError, setCourseError] = useState('')
   const [checkingCourse, setCheckingCourse] = useState(false)
+   const [instructors, setInstructors] = useState([])
   const [styleError, setStyleError] = useState('')
+
+
+  useEffect(() => {
+    setInstructors([])
+    const typed = courseInput.code.trim()
+    if (!typed) return undefined
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const match = await findCourse(typed)
+        if (!match || cancelled) return
+        const names = await getCourseInstructors(match.code)
+        if (!cancelled) setInstructors(names)
+      } catch {
+        // Professors couldn't load: the box stays disabled, the course can still be added.
+      }
+    }, 300)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [courseInput.code])
 
   function update(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -122,6 +155,17 @@ export default function Onboarding() {
       setCourseError(`${typed} isn't a UCI course. Pick one from the list, like MATH 2A or I&C SCI 31.`)
       return
     }
+
+    let professor = courseInput.professor.trim()
+    if (professor && instructors.length) {
+    const resolved = resolveInstructor(professor, instructors)
+    if (!resolved) {
+      setCourseError(`${professor} isn't listed for ${match.code}. Pick from the list or leave it blank.`)
+      return
+    }
+    professor = resolved
+    }
+
     const code = match.code
     if (form.courses.some((c) => c.code === code)) {
       setCourseError('You already added that class')
@@ -129,7 +173,7 @@ export default function Onboarding() {
     }
     setForm((prev) => ({
       ...prev,
-      courses: [...prev.courses, { code, title: match.title, professor: courseInput.professor.trim() }],
+      courses: [...prev.courses, { code, title: match.title, professor }],
     }))
     setCourseInput({ code: '', professor: '' })
     setCourseError('')
@@ -358,11 +402,11 @@ export default function Onboarding() {
                     value={courseInput.code}
                     existing={form.courses.map((c) => c.code)}
                     onChange={(text) => {
-                      setCourseInput((prev) => ({ ...prev, code: text }))
+                      setCourseInput({ code: text, professor: '' })
                       setCourseError('')
                     }}
                     onPick={(course) => {
-                      setCourseInput((prev) => ({ ...prev, code: course.code }))
+                      setCourseInput({ code: course.code, professor: '' })
                       setCourseError('')
                     }}
                     onEnter={addCourse}
@@ -373,7 +417,9 @@ export default function Onboarding() {
                   Professor (optional)
                   <input
                     type="text"
-                    placeholder="Last name"
+                    list="professor-options"
+                    placeholder={instructors.length ? 'Search professors' : 'Select a course first'}
+                    disabled={!instructors.length}
                     value={courseInput.professor}
                     onChange={(e) =>
                       setCourseInput((prev) => ({ ...prev, professor: e.target.value }))
@@ -385,6 +431,11 @@ export default function Onboarding() {
                       }
                     }}
                   />
+                  <datalist id="professor-options">
+                    {instructors.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
                 </label>
               </div>
 

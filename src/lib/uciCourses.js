@@ -221,3 +221,14 @@ export async function findCourse(text) {
   const course = (data || []).find((item) => item.courseNumber === num)
   return course ? { type: 'course', code: `${course.department} ${course.courseNumber}`, title: course.title } : null
 }
+
+export function getCourseInstructors(code) {
+  // "I&C SCI 31" -> "I&CSCI31", the ID format Anteater API expects
+  const id = String(code || '').toUpperCase().replace(/\s+/g, '')
+  return cached(`uci-instructors:${id}`, async () => {
+    const data = await getJson(`/courses/${encodeURIComponent(id)}`)
+    const names = (data?.instructors || []).map((person) => person.name).filter(Boolean)
+    const last = (name) => name.trim().split(/\s+/).slice(-1)[0]
+    return [...new Set(names)].sort((a, b) => last(a).localeCompare(last(b)))
+  })
+}
