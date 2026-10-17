@@ -30,9 +30,15 @@ export function overlaps(a, b) {
   return aStart < bEnd && bStart < aEnd
 }
 
-// The host isn't counted as an attendee: a new session starts at 0 joined.
+// The host is stored separately from attendees but still counts toward the
+// group size (see headcount).
 export function isHost(session, user) {
-  return session.hostName === user || session.ownerName === user
+  return session.hostName === user || session.ownerName === user || Boolean(session.mine)
+}
+
+// People in the session, host included: the host takes one of the spots.
+export function headcount(session) {
+  return session.attendees.filter((name) => name !== session.hostName).length + 1
 }
 
 // Hosting or joined.
@@ -87,7 +93,7 @@ export function openAlternatives(session, sessions, user) {
 }
 
 export function isFull(session) {
-  return Boolean(session.capacity) && session.attendees.length >= session.capacity
+  return Boolean(session.capacity) && headcount(session) >= session.capacity
 }
 
 export function validateSession({ course, start, end, hostName }) {

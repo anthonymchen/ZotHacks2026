@@ -1,5 +1,5 @@
 import { formatSessionWhen, initials } from '../time'
-import { isFull, describeConflicts, waitlistPosition, isHost, isMember } from '../sessions.js'
+import { isFull, describeConflicts, isHost, isMember, headcount } from '../sessions.js'
 
 export default function SessionCard({
   session,
@@ -8,8 +8,6 @@ export default function SessionCard({
   onLeave,
   onEnd,
   onOpen,
-  onWaitlist,
-  onLeaveWaitlist,
   conflicts = [],
   compact = false,
 }) {
@@ -17,11 +15,10 @@ export default function SessionCard({
   const hosting = isHost(session, currentUser)
   const full = !joined && isFull(session)
   const conflict = !joined && conflicts.length > 0
-  const waitPos = joined ? 0 : waitlistPosition(session, currentUser)
-  const waiting = session.waitlist?.length || 0
   const label = joined ? 'Joined' : full ? 'Full' : 'Join'
   const tags = session.tags?.length ? session.tags : [session.style]
-  const shown = session.attendees.slice(0, 3)
+  const people = [session.hostName, ...session.attendees.filter((name) => name !== session.hostName)]
+  const shown = people.slice(0, 3)
 
   return (
     <article
@@ -81,8 +78,7 @@ export default function SessionCard({
             </span>
           ))}
           <span className="attendee-count">
-            {session.attendees.length}/{session.capacity || session.attendees.length} Joined
-            {waiting > 0 ? ` · ${waiting} Waiting` : ''}
+            {headcount(session)}/{session.capacity || 8} Joined
           </span>
         </div>
         {onOpen ? <span className="card-hint">View Details →</span> : null}
@@ -113,26 +109,6 @@ export default function SessionCard({
               </button>
             ) : null}
           </div>
-        ) : waitPos > 0 ? (
-          <div className="joined-actions">
-            <button type="button" className="join-btn waitlisted" disabled>
-              Waitlist #{waitPos}
-            </button>
-            {onLeaveWaitlist ? (
-              <button
-                type="button"
-                className="leave-btn"
-                aria-label={`Leave the waitlist for ${session.course} study session`}
-                onClick={() => onLeaveWaitlist(session.id)}
-              >
-                Leave
-              </button>
-            ) : null}
-          </div>
-        ) : full && onWaitlist ? (
-          <button type="button" className="join-btn waitlist-btn" onClick={() => onWaitlist(session.id)}>
-            Join Waitlist
-          </button>
         ) : (
           <button type="button" className="join-btn" disabled={full} onClick={() => onJoin(session.id)}>
             {label}

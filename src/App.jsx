@@ -26,7 +26,7 @@ function MainAppRoute() {
   const name = signedIn?.name?.trim() || saved?.name?.trim()
   if (name) props.user = name
   const courses = (saved?.courses || []).map((course) => course.code).filter(Boolean)
-  if (courses.length) props.courses = courses
+  if (Array.isArray(saved?.courses)) props.courses = courses
   return (
     <MainApp
       {...props}

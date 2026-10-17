@@ -22,8 +22,6 @@ export default function StudySessions({
   onLeave,
   onEnd,
   onOpen,
-  onWaitlist,
-  onLeaveWaitlist,
   conflictsFor,
   hideConflicts = false,
   onCreate,
@@ -44,8 +42,7 @@ export default function StudySessions({
       (session) => session.attendees.includes(currentUser) && !isHost(session, currentUser),
     ),
   )
-  const waitlisted = byTime(sessions.filter((session) => (session.waitlist || []).includes(currentUser)))
-  const mineCount = hosting.length + joined.length + waitlisted.length
+  const mineCount = hosting.length + joined.length
   // On All Sessions, sessions you host are pinned to the top.
   const filteredHosting = filtered.filter((session) => isHost(session, currentUser))
   const filteredOthers = filtered.filter((session) => !isHost(session, currentUser))
@@ -59,8 +56,6 @@ export default function StudySessions({
       onLeave={onLeave}
       onEnd={onEnd}
       onOpen={onOpen}
-      onWaitlist={onWaitlist}
-      onLeaveWaitlist={onLeaveWaitlist}
       conflicts={conflictsFor ? conflictsFor(session) : []}
     />
   )
@@ -198,17 +193,6 @@ export default function StudySessions({
                 <div className="session-list">{joined.map(card)}</div>
               )}
             </section>
-
-            {waitlisted.length > 0 ? (
-              <section className="my-group">
-                <div className="section-head">
-                  <h2>
-                    Waitlisted <span className="tab-count">{waitlisted.length}</span>
-                  </h2>
-                </div>
-                <div className="session-list">{waitlisted.map(card)}</div>
-              </section>
-            ) : null}
           </div>
         )}
       </div>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { INITIAL_SESSIONS, EMPTY_PROFILE, DEFAULT_SETTINGS } from './data'
 import AppShell from './components/AppShell'
 import ConfirmDialog from './components/ConfirmDialog'
@@ -8,14 +8,21 @@ import { WaveScene, SleepScene, ThinkScene } from './components/Scenes'
 import {
   findConflicts,
   describeConflicts,
-  openAlternatives,
-  waitlistPosition,
   isMember,
+  isHost,
+  isFull,
   normalizeCourse,
   hasEnded,
 } from './sessions.js'
 import { formatSessionWhen } from './time'
-import { createSession as saveSessionToFirebase } from './lib/sessions'
+import {
+  createSession as saveSessionToFirebase,
+  subscribeSessions,
+  joinSession as joinSessionInFirebase,
+  leaveSession as leaveSessionInFirebase,
+  deleteSession as deleteSessionInFirebase,
+} from './lib/sessions'
+import { saveProfile as saveUserToFirebase } from './lib/users'
 import Home from './pages/Home'
 import StudyBuddies from './pages/StudyBuddies'
 import StudySessions from './pages/StudySessions'
@@ -32,6 +39,27 @@ import './App.css'
 const DEMO_USER = 'Alex'
 const DEMO_COURSES = ['ICS 31', 'Math 2B', 'Writing 39C']
 const SETTINGS_KEY = 'zotstudy-settings'
+const ONBOARDING_KEY = 'zotstudy-onboarding'
+
+// Keep the student's classes after a reload: update the profile saved in
+// this browser and the "users" record in Firebase (stored as a list, so
+// they show up as courses 0, 1, 2… in the console).
+function persistCourses(courses) {
+  let saved = null
+  try {
+    saved = JSON.parse(window.localStorage.getItem(ONBOARDING_KEY) || 'null')
+  } catch {
+    saved = null
+  }
+  const previous = new Map((saved?.courses || []).map((course) => [course.code, course]))
+  const list = courses.map((code) => previous.get(code) || { code, professor: '' })
+  try {
+    window.localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ ...(saved || {}), courses: list }))
+  } catch {
+    // Storage blocked: Firebase still gets the update below.
+  }
+  saveUserToFirebase({ courses: list }).catch((error) => console.error('Could not save courses to Firebase', error))
+}
 
 // Settings are remembered in this browser. Storage can be unavailable
 // (private windows, blocked site data), so every access is guarded.
@@ -57,7 +85,10 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
   const [currentUser, setCurrentUser] = useState(user)
   const [profile, setProfile] = useState(EMPTY_PROFILE)
   const [courses, setCourses] = useState(initialCourses)
-  const [sessions, setSessions] = useState(INITIAL_SESSIONS)
+  // Sessions come live from Firebase. Until it answers the list is empty;
+  // if it can't be reached we fall back to the sample sessions.
+  const [sessions, setSessions] = useState([])
+  const [live, setLive] = useState(false)
   const [selectedStyles, setSelectedStyles] = useState([])
   const [professorQuery, setProfessorQuery] = useState('')
   const [courseFilter, setCourseFilter] = useState('')
@@ -65,12 +96,10 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
   const leaving = sessions.find((session) => session.id === leavingId)
   const [endingId, setEndingId] = useState(null)
   const ending = sessions.find((session) => session.id === endingId)
-  const endingOthers = ending ? ending.attendees.filter((name) => name !== currentUser).length : 0
+  const endingOthers = ending ? ending.attendees.filter((name) => name !== currentUser && name !== ending.hostName).length : 0
   const [sessionsTab, setSessionsTab] = useState('all')
   const [openId, setOpenId] = useState(null)
   const [conflictId, setConflictId] = useState(null)
-  const [waitLeavingId, setWaitLeavingId] = useState(null)
-  const waitLeaving = sessions.find((session) => session.id === waitLeavingId)
   const [toast, setToast] = useState(null)
   const [settings, setSettings] = useState(loadSettings)
   const [settingsDialog, setSettingsDialog] = useState(null) // 'reset' | 'delete'
@@ -111,7 +140,6 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
       joined: sessions.filter(
         (session) => session.attendees.includes(currentUser) && session.hostName !== currentUser,
       ),
-      waitlisted: sessions.filter((session) => (session.waitlist || []).includes(currentUser)),
       settings,
     }
     try {
@@ -138,15 +166,57 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
   }, [])
 
   // What the student sees: sessions that haven't ended, for classes they
-  // take (plus anything they're hosting, joined or waiting on).
+  // take. Full sessions are hidden unless you're in them, and come back
+  // as soon as someone leaves.
   const myCourseKeys = courses.map(normalizeCourse)
-  const visibleSessions = sessions.filter(
-    (session) =>
-      !hasEnded(session, now) &&
-      (isMember(session, currentUser) ||
-        (session.waitlist || []).includes(currentUser) ||
-        myCourseKeys.includes(normalizeCourse(session.course))),
-  )
+  const visibleSessions = sessions.filter((session) => {
+    if (hasEnded(session, now)) return false
+    if (isMember(session, currentUser)) return true
+    return myCourseKeys.includes(normalizeCourse(session.course)) && !isFull(session)
+  })
+
+  // Listen to Firebase. When someone joins a session you host, tell you.
+  const nameRef = useRef(currentUser)
+  nameRef.current = currentUser
+  const alertsRef = useRef(settings.waitlistAlerts)
+  alertsRef.current = settings.waitlistAlerts
+  const seenRef = useRef(null)
+  useEffect(() => {
+    const stop = subscribeSessions(
+      (list) => {
+        const before = seenRef.current
+        const me = nameRef.current
+        if (before && alertsRef.current) {
+          list.forEach((session) => {
+            const previous = before.get(session.id)
+            if (!previous || !isHost(session, me)) return
+            session.attendees
+              .filter((name) => !previous.includes(name) && name !== me && name !== session.hostName)
+              .forEach((name) => notify(`${name} joined your ${session.course} study session.`))
+          })
+        }
+        seenRef.current = new Map(list.map((session) => [session.id, [...session.attendees]]))
+        setSessions(list)
+        setLive(true)
+      },
+      (error) => {
+        console.error('Could not load sessions from Firebase', error)
+        setLive(false)
+        setSessions((prev) => (prev.length ? prev : INITIAL_SESSIONS))
+      },
+    )
+    return stop
+  }, [])
+
+  // Save the class list whenever it changes (not on first load).
+  const coursesLoaded = useRef(false)
+  useEffect(() => {
+    if (!coursesLoaded.current) {
+      coursesLoaded.current = true
+      return
+    }
+    persistCourses(courses)
+  }, [courses])
 
   const conflictsFor = (session) => findConflicts(session, visibleSessions, currentUser)
   const pendingJoin = sessions.find((session) => session.id === conflictId)
@@ -156,13 +226,10 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
   function logout() {
     setSettingsDialog(null)
     setProfile(EMPTY_PROFILE)
-    setCourses(initialCourses)
-    setSessions(INITIAL_SESSIONS)
     setCurrentUser(user)
     setSessionsTab('all')
     setOpenId(null)
     setConflictId(null)
-    setWaitLeavingId(null)
     setToast(null)
     clearFilters()
     if (onLogout) {
@@ -186,7 +253,9 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
   }
 
   function addCourse(course) {
-    setCourses((prev) => (prev.includes(course) ? prev : [...prev, course]))
+    const code = normalizeCourse(course)
+    if (!code) return
+    setCourses((prev) => (prev.some((item) => normalizeCourse(item) === code) ? prev : [...prev, code]))
   }
 
   function removeCourse(course) {
@@ -214,42 +283,17 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
   function leaveSession(sessionId) {
     const target = sessions.find((session) => session.id === sessionId)
     if (!target) return
-    const attendees = target.attendees.filter((name) => name !== currentUser)
-    const waitlist = [...(target.waitlist || [])]
-    // A spot just opened: the next person on the waitlist moves in.
-    const promoted = waitlist.length > 0 && attendees.length < target.capacity ? waitlist.shift() : null
-    if (promoted) attendees.push(promoted)
-    setSessions((prev) =>
-      prev.map((session) => (session.id === sessionId ? { ...session, attendees, waitlist } : session)),
-    )
-    if (promoted && (settings.waitlistAlerts || promoted === currentUser)) {
-      setToast({
-        id: Date.now(),
-        message:
-          promoted === currentUser
-            ? `A spot opened up in ${target.course}. You're in!`
-            : `${promoted} moved up from the waitlist and took the open spot in ${target.course}.`,
+    if (live && target.firebaseId) {
+      leaveSessionInFirebase(target.firebaseId, { name: currentUser }).catch((error) => {
+        console.error('Could not leave session in Firebase', error)
+        notify("Couldn't leave the session. Check your connection and try again.")
       })
+      return
     }
-  }
-
-  function joinWaitlist(sessionId) {
-    setSessions((prev) =>
-      prev.map((session) =>
-        session.id === sessionId &&
-        !isMember(session, currentUser) &&
-        !(session.waitlist || []).includes(currentUser)
-          ? { ...session, waitlist: [...(session.waitlist || []), currentUser] }
-          : session,
-      ),
-    )
-  }
-
-  function leaveWaitlist(sessionId) {
     setSessions((prev) =>
       prev.map((session) =>
         session.id === sessionId
-          ? { ...session, waitlist: (session.waitlist || []).filter((name) => name !== currentUser) }
+          ? { ...session, attendees: session.attendees.filter((name) => name !== currentUser) }
           : session,
       ),
     )
@@ -258,6 +302,14 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
   const closeDrawer = useCallback(() => setOpenId(null), [])
 
   function endSession(sessionId) {
+    const target = sessions.find((session) => session.id === sessionId)
+    if (live && target?.firebaseId) {
+      deleteSessionInFirebase(target.firebaseId).catch((error) => {
+        console.error('Could not end session in Firebase', error)
+        notify("Couldn't end the session. Check your connection and try again.")
+      })
+      return
+    }
     setSessions((prev) => prev.filter((session) => session.id !== sessionId))
   }
 
@@ -271,18 +323,28 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
     joinSession(sessionId)
   }
 
+  // Joining is instant: you're added to the attendees in Firebase and the
+  // host gets a notification.
   function joinSession(sessionId) {
+    const target = sessions.find((session) => session.id === sessionId)
+    if (!target || isMember(target, currentUser)) return
+    if (isFull(target)) {
+      notify('Sorry, that session just filled up.')
+      return
+    }
+    if (live && target.firebaseId) {
+      joinSessionInFirebase(target.firebaseId, { name: currentUser })
+        .then(() => notify(`You joined the ${target.course} study session.`))
+        .catch((error) => {
+          console.error('Could not join session in Firebase', error)
+          notify("Couldn't join the session. Check your connection and try again.")
+        })
+      return
+    }
     setSessions((prev) =>
-      prev.map((session) => {
-        if (
-          session.id !== sessionId ||
-          isMember(session, currentUser) ||
-          session.attendees.length >= session.capacity
-        ) {
-          return session
-        }
-        return { ...session, attendees: [...session.attendees, currentUser] }
-      }),
+      prev.map((session) =>
+        session.id === sessionId ? { ...session, attendees: [...session.attendees, currentUser] } : session,
+      ),
     )
   }
 
@@ -293,18 +355,16 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
   }
 
   function handleCreated(session) {
-    // Save to the "sessions" collection in Firebase. The session shows up
-    // right away; if saving fails it stays on this device and we say so.
+    // Save to the "sessions" collection in Firebase. While connected, the
+    // live listener adds it to the list; otherwise it's kept on this device.
     saveSessionToFirebase(session)
-      .then((firebaseId) => {
-        setSessions((prev) => prev.map((item) => (item.id === session.id ? { ...item, firebaseId } : item)))
-        notify(`Your ${session.course} session was saved.`)
-      })
+      .then(() => notify(`Your ${session.course} session was saved.`))
       .catch((error) => {
         console.error('Could not save session to Firebase', error)
         notify("Couldn't save your session to the server. It's only on this device for now.")
+        if (live) setSessions((prev) => [session, ...prev])
       })
-    setSessions((prev) => [session, ...prev])
+    if (!live) setSessions((prev) => [session, ...prev])
     setSessionsTab('mine')
     setPage('sessions')
   }
@@ -331,8 +391,6 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
         onLeave={setLeavingId}
         onEnd={setEndingId}
         onOpen={setOpenId}
-        onWaitlist={joinWaitlist}
-        onLeaveWaitlist={setWaitLeavingId}
         conflictsFor={conflictsFor}
         hideConflicts={settings.hideConflicts}
         onCreate={() => setPage('create')}
@@ -352,8 +410,6 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
         onLeave={setLeavingId}
         onEnd={setEndingId}
         onOpen={setOpenId}
-        onWaitlist={joinWaitlist}
-        onLeaveWaitlist={setWaitLeavingId}
       />
     )
   } else if (page === 'settings') {
@@ -398,8 +454,6 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
         onLeave={setLeavingId}
         onEnd={setEndingId}
         onOpen={setOpenId}
-        onWaitlist={joinWaitlist}
-        onLeaveWaitlist={setWaitLeavingId}
         conflictsFor={conflictsFor}
         onNavigate={navigate}
         onAddCourse={addCourse}
@@ -416,10 +470,7 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
         currentUser={currentUser}
         photo={profile.photo}
         conflicts={openSession ? conflictsFor(openSession) : []}
-        alternatives={openSession ? openAlternatives(openSession, visibleSessions, currentUser) : []}
         onOpen={setOpenId}
-        onWaitlist={joinWaitlist}
-        onLeaveWaitlist={setWaitLeavingId}
         onClose={closeDrawer}
         onJoin={requestJoin}
         onLeave={setLeavingId}
@@ -444,23 +495,6 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
         onConfirm={() => {
           joinSession(conflictId)
           setConflictId(null)
-        }}
-      />
-      <ConfirmDialog
-        open={Boolean(waitLeaving)}
-        title="Leave the Waitlist?"
-        message={
-          waitLeaving
-            ? `You're #${waitlistPosition(waitLeaving, currentUser)} in line for the ${waitLeaving.course} study session. If you leave, you'll lose your place.`
-            : ''
-        }
-        confirmLabel="Leave Waitlist"
-        cancelLabel="Stay in Line"
-        illustration={<ThinkScene />}
-        onCancel={() => setWaitLeavingId(null)}
-        onConfirm={() => {
-          leaveWaitlist(waitLeavingId)
-          setWaitLeavingId(null)
         }}
       />
       <Toast toast={toast} onDone={clearToast} />

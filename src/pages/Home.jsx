@@ -40,8 +40,6 @@ export default function Home({
   onLeave,
   onEnd,
   onOpen,
-  onWaitlist,
-  onLeaveWaitlist,
   conflictsFor,
   onNavigate,
   onAddCourse,
@@ -193,8 +191,6 @@ export default function Home({
                 onLeave={onLeave}
                 onEnd={onEnd}
                 onOpen={onOpen}
-                onWaitlist={onWaitlist}
-                onLeaveWaitlist={onLeaveWaitlist}
                 conflicts={conflictsFor ? conflictsFor(session) : []}
                 compact
               />

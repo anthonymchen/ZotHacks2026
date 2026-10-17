@@ -1,6 +1,7 @@
 import {
   collection, addDoc, getDocs, doc, updateDoc,
-  arrayUnion, Timestamp, query, orderBy, serverTimestamp,
+  arrayUnion, arrayRemove, deleteDoc, onSnapshot, Timestamp, query, orderBy,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db, ensureSignedIn } from "../firebase";
 
@@ -49,10 +50,70 @@ export async function listSessions({ course, location, style } = {}) {
   return sessions;
 }
 
+// Turn a Firestore document into the shape the app uses.
+// uid is the signed-in user's id, so we can tell which sessions they host.
+function toAppSession(snapshot, uid) {
+  const s = snapshot.data();
+  const iso = (value) => {
+    const date = value?.toDate ? value.toDate() : new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  };
+  const start = iso(s.start);
+  const end = iso(s.end);
+  if (!start || !end) return null;
+  return {
+    ...s,
+    id: snapshot.id,
+    firebaseId: snapshot.id,
+    start,
+    end,
+    attendees: s.attendees || [],
+    capacity: s.capacity || 8,
+    tags: s.tags?.length ? s.tags : [s.style],
+    mine: Boolean(uid && s.hostId === uid),
+  };
+}
+
+// Live list of every session. Calls onChange with the full list now and
+// again whenever anyone creates, joins, leaves or ends a session.
+// Returns a function that stops listening.
+export function subscribeSessions(onChange, onError) {
+  let stop = () => {};
+  let cancelled = false;
+  ensureSignedIn()
+    .then((user) => {
+      if (cancelled) return;
+      stop = onSnapshot(
+        query(sessionsRef, orderBy("start")),
+        (snap) => onChange(snap.docs.map((d) => toAppSession(d, user.uid)).filter(Boolean)),
+        onError,
+      );
+    })
+    .catch(onError);
+  return () => {
+    cancelled = true;
+    stop();
+  };
+}
+
 // user: { name } (the display name that gets added to attendees)
 export async function joinSession(id, user) {
   await ensureSignedIn();
   await updateDoc(doc(db, "sessions", id), {
     attendees: arrayUnion(user.name),
   });
+}
+
+// user: { name } (the display name removed from attendees)
+export async function leaveSession(id, user) {
+  await ensureSignedIn();
+  await updateDoc(doc(db, "sessions", id), {
+    attendees: arrayRemove(user.name),
+  });
+}
+
+// Removes the session for everyone (host only).
+export async function deleteSession(id) {
+  await ensureSignedIn();
+  await deleteDoc(doc(db, "sessions", id));
 }

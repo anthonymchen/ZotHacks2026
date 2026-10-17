@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import Avatar from './Avatar'
 import { formatSessionWhen } from '../time'
-import { isFull, describeConflicts, waitlistPosition, isHost, isMember } from '../sessions.js'
+import { isFull, describeConflicts, isHost, isMember, headcount } from '../sessions.js'
 import { STUDY_BUDDIES } from '../data'
 
 // Look up a little more about an attendee (full name, study style) when we have it.
@@ -15,10 +15,6 @@ export default function SessionDrawer({
   currentUser,
   photo,
   conflicts = [],
-  alternatives = [],
-  onOpen,
-  onWaitlist,
-  onLeaveWaitlist,
   onClose,
   onJoin,
   onLeave,
@@ -42,11 +38,10 @@ export default function SessionDrawer({
   const joined = isMember(session, currentUser)
   const hosting = isHost(session, currentUser)
   const full = !joined && isFull(session)
-  const capacity = session.capacity || Math.max(session.attendees.length, 1)
-  const spotsLeft = Math.max(capacity - session.attendees.length, 0)
-  const fill = Math.min(session.attendees.length / capacity, 1)
-  const waitlist = session.waitlist || []
-  const waitPos = joined ? 0 : waitlistPosition(session, currentUser)
+  const count = headcount(session)
+  const capacity = session.capacity || 8
+  const spotsLeft = Math.max(capacity - count, 0)
+  const fill = Math.min(count / capacity, 1)
   // Host first, then you, then everyone else. The host isn't an attendee,
   // so they're listed here but not counted in the spots.
   const people = [session.hostName, ...session.attendees.filter((name) => name !== session.hostName)].sort((a, b) => {
@@ -110,46 +105,13 @@ export default function SessionDrawer({
             </div>
           ) : null}
 
-          {full || waitPos > 0 ? (
-            <div className="waitlist-box" role="note">
-              <strong>
-                {waitPos > 0 ? `You're #${waitPos} on the waitlist` : 'This session is full'}
-              </strong>
-              <p>
-                {waitPos > 0
-                  ? "If someone leaves, the next person in line gets their spot automatically. We'll let you know."
-                  : `Join the waitlist${
-                      waitlist.length ? ` (${waitlist.length} ${waitlist.length === 1 ? 'person' : 'people'} ahead of you)` : ''
-                    } and you'll get the next open spot automatically.`}
-              </p>
-              {alternatives.length > 0 ? (
-                <div className="alt-list">
-                  <span className="alt-title">Open {session.course} sessions with room:</span>
-                  {alternatives.map((other) => (
-                    <button key={other.id} type="button" className="alt-item" onClick={() => onOpen(other.id)}>
-                      <span>
-                        <strong>{formatSessionWhen(other.start, other.end)}</strong>
-                        <span>{other.location}</span>
-                      </span>
-                      <span className="alt-spots">
-                        {other.capacity - other.attendees.length} spots left →
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
           <div className="capacity">
             <div className="capacity-top">
               <span>
-                <strong>{session.attendees.length}</strong> of {capacity} spots filled
+                <strong>{count}</strong> of {capacity} spots filled
               </span>
               <span className={spotsLeft === 0 ? 'capacity-full' : ''}>
-                {spotsLeft === 0
-                  ? `Full${waitlist.length ? ` · ${waitlist.length} waiting` : ''}`
-                  : `${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left`}
+                {spotsLeft === 0 ? 'Full' : `${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left`}
               </span>
             </div>
             <div className="capacity-bar" aria-hidden="true">
@@ -158,7 +120,7 @@ export default function SessionDrawer({
           </div>
 
           <h3 className="people-title">
-            Who's Going <span className="tab-count">{session.attendees.length}</span>
+            Who's Going <span className="tab-count">{count}</span>
           </h3>
           <ul className="people-list">
             {people.map((name) => {
@@ -182,30 +144,6 @@ export default function SessionDrawer({
               )
             })}
           </ul>
-
-          {waitlist.length > 0 ? (
-            <>
-              <h3 className="people-title">
-                Waitlist <span className="tab-count">{waitlist.length}</span>
-              </h3>
-              <ol className="people-list waitlist-list">
-                {waitlist.map((name, index) => {
-                  const info = personInfo(name)
-                  const isYou = name === currentUser
-                  return (
-                    <li key={name} className="person waiting">
-                      <span className="queue-num">#{index + 1}</span>
-                      <Avatar name={info?.name || name} photo={isYou ? photo : ''} />
-                      <span className="person-text">
-                        <span className="person-name">{isYou ? `${name} (you)` : info?.name || name}</span>
-                      </span>
-                      {isYou ? <span className="person-badge you">You</span> : null}
-                    </li>
-                  )
-                })}
-              </ol>
-            </>
-          ) : null}
         </div>
 
         <footer className="drawer-foot">
@@ -219,21 +157,6 @@ export default function SessionDrawer({
             >
               <span className="swap-default">✓ Hosting</span>
               <span className="swap-hover">End Session</span>
-            </button>
-          ) : waitPos > 0 ? (
-            // Same pattern for the waitlist: shows your place, turns into "Leave Waitlist".
-            <button
-              type="button"
-              className="swap-btn"
-              aria-label={`On the waitlist, number ${waitPos}. Leave Waitlist`}
-              onClick={() => onLeaveWaitlist(session.id)}
-            >
-              <span className="swap-default">✓ On Waitlist (#{waitPos})</span>
-              <span className="swap-hover">Leave Waitlist</span>
-            </button>
-          ) : full ? (
-            <button type="button" className="join-btn drawer-join" onClick={() => onWaitlist(session.id)}>
-              Join Waitlist
             </button>
           ) : joined ? (
             // One wide button: shows "Joined", turns into "Leave Session" on hover or focus.

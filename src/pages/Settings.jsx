@@ -135,8 +135,8 @@ export default function Settings({
                 onChange={(value) => onChange('reminderLead', Number(value))}
               />
             </Row>
-            <Row title="Waitlist Updates" description="Show a notification when someone moves up from a waitlist.">
-              <Switch checked={settings.waitlistAlerts} label="Waitlist updates" onChange={set('waitlistAlerts')} />
+            <Row title="Someone Joins Your Session" description="Get a notification when a student joins a session you're hosting.">
+              <Switch checked={settings.waitlistAlerts} label="Notify me when someone joins my session" onChange={set('waitlistAlerts')} />
             </Row>
             <Row title="Study Buddy Requests" description="Let other Anteaters know you'd like to hear about new buddy requests.">
               <Switch checked={settings.buddyRequests} label="Study buddy requests" onChange={set('buddyRequests')} />
