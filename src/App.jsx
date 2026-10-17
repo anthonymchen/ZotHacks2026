@@ -3,10 +3,25 @@ import Login from './Login.jsx'
 import Onboarding from './onboarding/Onboarding.jsx'
 import MainApp from './MainApp.jsx'
 
-// The main app sends Log Out back to the login page.
+// Name and classes saved by onboarding (Onboarding.jsx stores them here).
+function onboardingProfile() {
+  try {
+    return JSON.parse(localStorage.getItem('zotstudy-onboarding') || 'null')
+  } catch {
+    return null
+  }
+}
+
+// The main app greets the student by the name and classes they entered
+// during onboarding, and Log Out goes back to the login page.
 function MainAppRoute() {
   const navigate = useNavigate()
-  return <MainApp onLogout={() => navigate('/')} />
+  const saved = onboardingProfile()
+  const props = {}
+  if (saved?.name?.trim()) props.user = saved.name.trim()
+  const courses = (saved?.courses || []).map((course) => course.code).filter(Boolean)
+  if (courses.length) props.courses = courses
+  return <MainApp {...props} onLogout={() => navigate('/')} />
 }
 
 function App() {

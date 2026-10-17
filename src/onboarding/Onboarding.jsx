@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './Onboarding.css'
 import { saveProfile } from '../lib/users'
 
@@ -34,6 +35,7 @@ const STYLES = [
 ]
 
 export default function Onboarding() {
+  const navigate = useNavigate()
   const [form, setForm] = useState({ name: '', email: '', major: '', year: '', courses: [], styles: [] })
   const [errors, setErrors] = useState({})
   const [saved, setSaved] = useState(false)
@@ -177,6 +179,8 @@ export default function Onboarding() {
     }
 
     setSaved(true)
+    // Show "You're all set!" for a moment, then open the main app.
+    setTimeout(() => navigate('/home'), 900)
   }
 
   return (
