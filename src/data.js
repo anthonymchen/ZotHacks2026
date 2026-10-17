@@ -56,6 +56,7 @@ export const VISIBILITY_OPTIONS = [
 export const DEFAULT_SETTINGS = {
   theme: 'light',
   reduceMotion: false,
+  backdrop: true,
   sessionReminders: true,
   reminderLead: 30,
   waitlistAlerts: true,

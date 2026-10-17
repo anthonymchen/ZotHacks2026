@@ -525,7 +525,7 @@ export default function MainApp({
   }
 
   return (
-    <AppShell currentPage={page} onNavigate={navigate} onLogout={logout}>
+    <AppShell currentPage={page} onNavigate={navigate} onLogout={logout} backdrop={settings.backdrop !== false}>
       {content}
       <SessionDrawer
         session={openSession}

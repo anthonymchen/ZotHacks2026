@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import Sidebar from './Sidebar'
 import ConfirmDialog from './ConfirmDialog'
 import { WaveScene } from './Scenes'
+import CampusBackdrop, { CampusSkyline } from './CampusBackdrop'
 
-export default function AppShell({ currentPage, onNavigate, onLogout, children }) {
+export default function AppShell({ currentPage, onNavigate, onLogout, backdrop = true, children }) {
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const cancelLogout = useCallback(() => setConfirmingLogout(false), [])
 
@@ -14,12 +15,16 @@ export default function AppShell({ currentPage, onNavigate, onLogout, children }
 
   return (
     <div className="app-shell">
+      {backdrop ? <CampusBackdrop /> : null}
       <Sidebar
         currentPage={currentPage}
         onNavigate={onNavigate}
         onLogout={() => setConfirmingLogout(true)}
       />
-      <div className="shell-main">{children}</div>
+      <div className="shell-main">
+        {children}
+        {backdrop ? <CampusSkyline /> : null}
+      </div>
       <ConfirmDialog
         open={confirmingLogout}
         title="Log Out?"

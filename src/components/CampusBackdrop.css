@@ -1,0 +1,209 @@
+/* Campus background (see CampusBackdrop.jsx). Sits behind every page. */
+/* The shell gets its own layer so the background (z-index -1) sits behind
+   everything in it without changing how the sidebar, popups and panels stack. */
+.app-shell {
+  isolation: isolate;
+}
+
+.campus-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  --bd-line: rgba(12, 35, 64, 0.16);
+  --bd-gold: rgba(201, 146, 10, 0.5);
+  --bd-pattern: rgba(12, 35, 64, 0.06);
+  --bd-glow-a: rgba(255, 199, 44, 0.16);
+  --bd-glow-b: rgba(255, 199, 44, 0);
+}
+
+:root[data-theme='dark'] .campus-backdrop {
+  --bd-line: rgba(255, 199, 44, 0.2);
+  --bd-gold: rgba(255, 199, 44, 0.55);
+  --bd-pattern: rgba(255, 199, 44, 0.06);
+  --bd-glow-a: rgba(255, 199, 44, 0.1);
+  --bd-glow-b: rgba(255, 199, 44, 0);
+}
+
+.bd-pattern {
+  position: absolute;
+  inset: 0;
+}
+
+.bd-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.bd-pat {
+  fill: none;
+  stroke: var(--bd-pattern);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bd-line,
+.bd-line path,
+.bd-line circle {
+  fill: none;
+  stroke: var(--bd-line);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bd-dash {
+  stroke-dasharray: 10 14;
+}
+
+.bd-gold,
+.bd-gold path,
+.bd-gold rect {
+  fill: none;
+  stroke: var(--bd-gold);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bd-gold-fill {
+  fill: var(--bd-gold);
+}
+
+.bd-glow-stop-a {
+  stop-color: var(--bd-glow-a);
+}
+
+.bd-glow-stop-b {
+  stop-color: var(--bd-glow-b);
+}
+
+.bd-star {
+  fill: var(--bd-gold);
+  opacity: 0.5;
+  animation: bd-twinkle 4.5s ease-in-out infinite;
+}
+
+.bd-lamp {
+  fill: var(--bd-gold);
+  filter: drop-shadow(0 0 6px rgba(255, 199, 44, 0.8));
+  animation: bd-glow 5s ease-in-out infinite;
+}
+
+/* The anteater strolls across the bottom of the screen (about a minute). */
+.bd-walker {
+  animation: bd-walk 70s linear infinite;
+}
+
+.bd-bob {
+  animation: bd-bob 0.9s ease-in-out infinite;
+}
+
+.bd-leg {
+  transform-box: fill-box;
+  transform-origin: top center;
+}
+
+.bd-leg-a {
+  animation: bd-step 0.9s ease-in-out infinite;
+}
+
+.bd-leg-b {
+  animation: bd-step 0.9s ease-in-out infinite reverse;
+}
+
+@keyframes bd-walk {
+  from {
+    transform: translateX(-140px);
+  }
+  to {
+    transform: translateX(1580px);
+  }
+}
+
+@keyframes bd-bob {
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes bd-step {
+  0%,
+  100% {
+    transform: rotate(14deg);
+  }
+  50% {
+    transform: rotate(-14deg);
+  }
+}
+
+@keyframes bd-twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@keyframes bd-glow {
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Calmer when the system asks for less motion (the app's own Reduce Motion
+   setting already turns every animation off). */
+@media (prefers-reduced-motion: reduce) {
+  .bd-walker,
+  .bd-bob,
+  .bd-leg-a,
+  .bd-leg-b,
+  .bd-star,
+  .bd-lamp {
+    animation: none;
+  }
+
+  .bd-walker {
+    transform: translateX(1240px);
+  }
+}
+
+:root[data-motion='reduce'] .bd-walker {
+  transform: translateX(1240px);
+}
+
+/* Campus scene at the bottom of each page. */
+.campus-skyline {
+  height: 240px;
+  margin-top: 24px;
+  pointer-events: none;
+  --bd-line: rgba(12, 35, 64, 0.22);
+  --bd-gold: rgba(201, 146, 10, 0.6);
+}
+
+:root[data-theme='dark'] .campus-skyline {
+  --bd-line: rgba(255, 199, 44, 0.26);
+  --bd-gold: rgba(255, 199, 44, 0.65);
+}
+
+.campus-skyline svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 900px) {
+  .bd-pattern {
+    opacity: 0.7;
+  }
+
+  .campus-skyline {
+    height: 160px;
+  }
+}

@@ -114,6 +114,9 @@ export default function Settings({
             <Row title="Reduce Motion" description="Turn off animations like the twinkling lightbulb and the spinning gear.">
               <Switch checked={settings.reduceMotion} label="Reduce motion" onChange={set('reduceMotion')} />
             </Row>
+            <Row title="Campus Background" description="Show the gold campus scene with a strolling anteater behind each page.">
+              <Switch checked={settings.backdrop !== false} label="Campus background" onChange={set('backdrop')} />
+            </Row>
           </section>
 
           <section className="panel-block settings-card" id="settings-notifications">
