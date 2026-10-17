@@ -1,6 +1,7 @@
 import { isMember, isHost } from '../sessions.js'
+import CourseSearch from '../components/CourseSearch'
 import { useEffect, useRef, useState } from 'react'
-import { SUGGESTED_COURSES, STYLES, YEARS } from '../data'
+import { STYLES, YEARS } from '../data'
 import Avatar from '../components/Avatar'
 import PageBanner from '../components/PageBanner'
 import EmptyState from '../components/EmptyState'
@@ -257,7 +258,6 @@ export default function Profile({
 }) {
   const [editing, setEditing] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [draft, setDraft] = useState('')
   const joined = sessions
     .filter((session) => isMember(session, currentUser))
     .sort((a, b) => new Date(a.start) - new Date(b.start))
@@ -268,14 +268,6 @@ export default function Profile({
     const timer = setTimeout(() => setSaved(false), 3000)
     return () => clearTimeout(timer)
   }, [saved])
-
-  function handleAdd(event) {
-    event.preventDefault()
-    const next = draft.trim()
-    if (!next) return
-    onAddCourse(next)
-    setDraft('')
-  }
 
   const subtitle = [profile.pronouns, profile.major, profile.year].filter(Boolean).join(' · ')
 
@@ -361,23 +353,15 @@ export default function Profile({
             </span>
           ))}
         </div>
-        <form className="add-row" onSubmit={handleAdd}>
-          <input
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder="e.g. ICS 46"
-            list="profile-course-suggestions"
-            aria-label="Add a course"
+        <div className="add-row">
+          <CourseSearch
+            existing={courses}
+            ariaLabel="Add a UCI course"
+            placeholder="Search UCI courses, e.g. I&C SCI 46"
+            onSelect={(course) => onAddCourse(course.code)}
           />
-          <datalist id="profile-course-suggestions">
-            {SUGGESTED_COURSES.map((course) => (
-              <option key={course} value={course} />
-            ))}
-          </datalist>
-          <button type="submit" className="primary" disabled={!draft.trim()}>
-            Add Course
-          </button>
-        </form>
+        </div>
+        <p className="hint">Only real UCI courses can be added. Pick one from the list or type its code and press Enter.</p>
       </section>
 
       <section className="panel-block">

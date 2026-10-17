@@ -3470,3 +3470,17 @@
   font-size: 13px;
 }
 
+/* ---------- UCI course search placement ---------- */
+.home-course-search {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1 1 340px;
+  min-width: 0;
+}
+
+.add-row .course-search input,
+.home-course-search .course-search input {
+  width: 100%;
+}
+

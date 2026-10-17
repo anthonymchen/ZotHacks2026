@@ -1,3 +1,5 @@
+import { canonicalCourse } from './lib/uciCourses'
+
 // Shared helpers for filtering and validating study sessions.
 
 export function filterSessions(sessions, selectedStyles, professorQuery, courseFilter = '') {
@@ -46,9 +48,10 @@ export function isMember(session, user) {
   return isHost(session, user) || session.attendees.includes(user)
 }
 
-// "math 2b", "MATH 2B" and "Math  2B" are the same course.
+// "math 2b", "MATH 2B" and "Math  2B" are the same course, and everyday
+// names match UCI's official ones ("ICS 31" = "I&C SCI 31").
 export function normalizeCourse(course) {
-  return String(course || '').trim().replace(/\s+/g, ' ').toUpperCase()
+  return canonicalCourse(course)
 }
 
 export function hasEnded(session, now = Date.now()) {

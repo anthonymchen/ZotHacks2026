@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import './Onboarding.css'
 import { saveProfile } from '../lib/users'
 import { setCurrentUser, getCurrentUser, markOnboarded } from '../currentUser'
+import CourseSearch from '../components/CourseSearch'
+import { findCourse } from '../lib/uciCourses'
 
 
 const MAJORS = [
@@ -54,6 +56,7 @@ export default function Onboarding() {
   const [step, setStep] = useState(1)
   const [courseInput, setCourseInput] = useState({ code: '', professor: '' })
   const [courseError, setCourseError] = useState('')
+  const [checkingCourse, setCheckingCourse] = useState(false)
   const [styleError, setStyleError] = useState('')
 
   function update(field, value) {
@@ -97,23 +100,35 @@ export default function Onboarding() {
     setStep(2)
   }
 
-  function addCourse() {
-    const code = courseInput.code.trim().toUpperCase().replace(/\s+/g, ' ')
-    if (!code) {
+  // Only real UCI courses can be added: checked against Anteater API.
+  async function addCourse() {
+    const typed = courseInput.code.trim().toUpperCase().replace(/\s+/g, ' ')
+    if (!typed) {
       setCourseError('Enter a course code, like MATH 2A')
       return
     }
-    if (!/^[A-Z&]+( [A-Z&]+)* ?\d+[A-Z]*$/.test(code)) {
-      setCourseError('Use a format like MATH 2A or COMPSCI 161')
+    let match = null
+    setCheckingCourse(true)
+    try {
+      match = await findCourse(typed)
+    } catch {
+      setCourseError("Couldn't reach UCI's course list. Check your connection and try again.")
+      return
+    } finally {
+      setCheckingCourse(false)
+    }
+    if (!match) {
+      setCourseError(`${typed} isn't a UCI course. Pick one from the list, like MATH 2A or I&C SCI 31.`)
       return
     }
+    const code = match.code
     if (form.courses.some((c) => c.code === code)) {
       setCourseError('You already added that class')
       return
     }
     setForm((prev) => ({
       ...prev,
-      courses: [...prev.courses, { code, professor: courseInput.professor.trim() }],
+      courses: [...prev.courses, { code, title: match.title, professor: courseInput.professor.trim() }],
     }))
     setCourseInput({ code: '', professor: '' })
     setCourseError('')
@@ -318,20 +333,20 @@ export default function Onboarding() {
               <div className="onboarding-row">
                 <label>
                   <span>Course <span className="required" aria-hidden="true">*</span></span>
-                  <input
-                    type="text"
+                  <CourseSearch
+                    ariaLabel="Course"
                     placeholder="MATH 2A"
                     value={courseInput.code}
-                    onChange={(e) => {
-                      setCourseInput((prev) => ({ ...prev, code: e.target.value }))
+                    existing={form.courses.map((c) => c.code)}
+                    onChange={(text) => {
+                      setCourseInput((prev) => ({ ...prev, code: text }))
                       setCourseError('')
                     }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        addCourse()
-                      }
+                    onPick={(course) => {
+                      setCourseInput((prev) => ({ ...prev, code: course.code }))
+                      setCourseError('')
                     }}
+                    onEnter={addCourse}
                   />
                 </label>
 
@@ -356,8 +371,8 @@ export default function Onboarding() {
 
               {courseError && <span className="field-error">{courseError}</span>}
 
-              <button type="button" className="onboarding-add" onClick={addCourse}>
-                Add class
+              <button type="button" className="onboarding-add" onClick={addCourse} disabled={checkingCourse}>
+                {checkingCourse ? 'Checking…' : 'Add class'}
               </button>
 
               {form.courses.length > 0 && (
@@ -366,7 +381,8 @@ export default function Onboarding() {
                     <li key={c.code}>
                       <span>
                         <strong>{c.code}</strong>
-                        {c.professor && ` · ${c.professor}`}
+                        {c.title && ` · ${c.title}`}
+                        {c.professor && ` · Prof. ${c.professor}`}
                       </span>
                       <button
                         type="button"

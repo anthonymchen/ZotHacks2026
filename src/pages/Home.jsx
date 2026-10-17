@@ -5,6 +5,7 @@ import { BuddiesIcon, SessionsIcon } from '../components/Icons'
 import SessionCard from '../components/SessionCard'
 import SessionFilters from '../components/SessionFilters'
 import EmptyState from '../components/EmptyState'
+import CourseSearch from '../components/CourseSearch'
 import { WaveScene } from '../components/Scenes'
 
 const ACTIONS = [
@@ -46,7 +47,6 @@ export default function Home({
   onRemoveCourse,
 }) {
   const [adding, setAdding] = useState(false)
-  const [draft, setDraft] = useState('')
 
   const filtered = filterSessions(sessions, selectedStyles, professorQuery, courseFilter)
   const firstName = currentUser.split(' ')[0]
@@ -56,12 +56,6 @@ export default function Home({
     day: 'numeric',
   })
 
-  function addCourse() {
-    const next = draft.trim()
-    if (next) onAddCourse(next)
-    setDraft('')
-    setAdding(false)
-  }
 
   return (
     <main className="dashboard">
@@ -123,28 +117,22 @@ export default function Home({
             </span>
           ))}
           {adding ? (
-            <form
-              className="add-course"
-              onSubmit={(event) => {
-                event.preventDefault()
-                addCourse()
-              }}
-            >
-              <input
+            <div className="add-course home-course-search">
+              <CourseSearch
                 autoFocus
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                onBlur={addCourse}
-                onKeyDown={(event) => {
-                  if (event.key === 'Escape') {
-                    setDraft('')
-                    setAdding(false)
-                  }
+                existing={courses}
+                ariaLabel="Add a UCI course"
+                placeholder="Search UCI courses, e.g. MATH 2B"
+                onSelect={(course) => {
+                  onAddCourse(course.code)
+                  setAdding(false)
                 }}
-                placeholder="e.g. ICS 46"
-                aria-label="New course"
+                onCancel={() => setAdding(false)}
               />
-            </form>
+              <button type="button" className="ghost" onClick={() => setAdding(false)}>
+                Done
+              </button>
+            </div>
           ) : (
             <button type="button" className="add-course-btn" onClick={() => setAdding(true)}>
               + Add Course

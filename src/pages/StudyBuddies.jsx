@@ -3,12 +3,13 @@ import { STUDY_BUDDIES } from '../data'
 import Avatar from '../components/Avatar'
 import PageBanner from '../components/PageBanner'
 import EmptyState from '../components/EmptyState'
+import { normalizeCourse } from '../sessions.js'
 import { HugScene } from '../components/Scenes'
 
 const BAND_TONES = ['navy', 'gold', 'sky', 'cream']
 
-// "math 2b", "MATH 2B" and "Math  2B" all count as the same course.
-const normalize = (text) => text.trim().replace(/\s+/g, ' ').toUpperCase()
+// "math 2b", "MATH 2B" and "ICS 31" / "I&C SCI 31" count as the same course.
+const normalize = normalizeCourse
 
 export default function StudyBuddies({ courses, hidden = false, onNavigate }) {
   const [requested, setRequested] = useState([])
@@ -23,13 +24,14 @@ export default function StudyBuddies({ courses, hidden = false, onNavigate }) {
   const recommended = everyone.filter((buddy) => buddy.shared.length > 0)
 
   // Searching looks through every student by name, course or study style.
-  const term = normalize(query)
+  const plain = (text) => String(text).trim().replace(/\s+/g, ' ').toUpperCase()
+  const term = plain(query)
   const searching = term.length > 0
   const results = searching
     ? everyone.filter((buddy) =>
         // Match from the start of a word, so "ics" finds ICS 31 but not Physics.
         [buddy.name, buddy.style, ...buddy.courses].some((field) => {
-          const text = normalize(field)
+          const text = plain(field)
           return text.startsWith(term) || text.includes(` ${term}`)
         }),
       )
