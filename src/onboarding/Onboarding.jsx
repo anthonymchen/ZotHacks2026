@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import './Onboarding.css'
+import { saveProfile } from '../lib/users'
 
 
 const MAJORS = [
@@ -54,7 +55,7 @@ export default function Onboarding() {
     return next
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
     const nextErrors = validate()
     if (Object.keys(nextErrors).length) {
@@ -105,18 +106,31 @@ export default function Onboarding() {
     setSaved(false)
   }
 
-  function handleClassesSubmit(event) {
+  async function handleClassesSubmit(event) {
     event.preventDefault()
     if (!form.courses.length) {
       setCourseError('Add at least one class')
       return
     }
+
     const profile = { ...form, step: 'classes' }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(profile))
     console.log('Onboarding classes', profile)
+
+    try {
+      await saveProfile({
+        name: profile.name,
+        email: profile.email,
+        major: profile.major,
+        year: profile.year,
+        courses: profile.courses,
+      })
+    } catch (err) {
+      console.error('Could not save classes to Firebase', err)
+    }
+
     setSaved(true)
   }
-
 
   return (
     <main className="onboarding">
@@ -310,5 +324,4 @@ export default function Onboarding() {
         )}
       </section>
     </main>
-  )
-}
+  )}
