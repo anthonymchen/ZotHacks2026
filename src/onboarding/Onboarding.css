@@ -241,6 +241,50 @@
   cursor: pointer;
 }
 
+.style-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.style-chip {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  padding: 14px;
+  cursor: pointer;
+}
+
+.style-chip strong {
+  color: var(--navy);
+}
+
+.style-chip span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.style-chip:hover {
+  border-color: var(--navy);
+}
+
+.style-chip.is-selected {
+  border-color: var(--navy);
+  background: var(--cream);
+  outline: 2px solid var(--gold);
+}
+
+@media (max-width: 860px) {
+  .style-options {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 860px) {
   .onboarding {
     grid-template-columns: 1fr;

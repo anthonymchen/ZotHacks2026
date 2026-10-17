@@ -26,13 +26,21 @@ const YEARS = ['1st year', '2nd year', '3rd year', '4th year', '5th+', 'Graduate
 
 const STORAGE_KEY = 'zotstudy-onboarding'
 
+const STYLES = [
+  { value: 'quiet', label: 'Quiet', hint: 'Heads down, minimal talking' },
+  { value: 'collaborative', label: 'Collaborative', hint: 'Work through problems together' },
+  { value: 'teaching', label: 'Teaching', hint: 'Explain and quiz each other' },
+  { value: 'practice', label: 'Practice', hint: 'Problem sets and past exams' },
+]
+
 export default function Onboarding() {
-  const [form, setForm] = useState({ name: '', email: '', major: '', year: '', courses: [] })
+  const [form, setForm] = useState({ name: '', email: '', major: '', year: '', courses: [], styles: [] })
   const [errors, setErrors] = useState({})
   const [saved, setSaved] = useState(false)
   const [step, setStep] = useState(1)
   const [courseInput, setCourseInput] = useState({ code: '', professor: '' })
   const [courseError, setCourseError] = useState('')
+  const [styleError, setStyleError] = useState('')
 
   function update(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -129,6 +137,45 @@ export default function Onboarding() {
       console.error('Could not save classes to Firebase', err)
     }
 
+    setStep(3)
+  }
+
+    function toggleStyle(value) {
+    setForm((prev) => ({
+      ...prev,
+      styles: prev.styles.includes(value)
+        ? prev.styles.filter((s) => s !== value)
+        : [...prev.styles, value],
+    }))
+    setStyleError('')
+    setSaved(false)
+  }
+
+  async function handleStyleSubmit(event) {
+    event.preventDefault()
+    if (!form.styles.length) {
+      setStyleError('Pick at least one study style')
+      return
+    }
+
+    const profile = { ...form, step: 'study-style', onboarded: true }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(profile))
+    console.log('Onboarding complete', profile)
+
+    try {
+      await saveProfile({
+        name: profile.name,
+        email: profile.email,
+        major: profile.major,
+        year: profile.year,
+        courses: profile.courses,
+        styles: profile.styles,
+        onboarded: true,
+      })
+    } catch (err) {
+      console.error('Could not save study style to Firebase', err)
+    }
+
     setSaved(true)
   }
 
@@ -144,7 +191,7 @@ export default function Onboarding() {
         <ol className="onboarding-steps" aria-label="Onboarding progress">
           <li className={step === 1 ? 'is-active' : ''}>Student info</li>
           <li className={step === 2 ? 'is-active' : ''}>Your classes</li>
-          <li>Study style</li>
+          <li className={step === 3 ? 'is-active' : ''}>Study style</li>
         </ol>
       </aside>
 
@@ -317,6 +364,51 @@ export default function Onboarding() {
               {saved && (
                 <p className="onboarding-saved" role="status">
                   Classes saved. Study style comes next.
+                </p>
+              )}
+            </form>
+          </>
+        )}
+        {step === 3 && (
+          <>
+            <h2>How you like to study</h2>
+            <p className="onboarding-sub">
+              Pick one or more. We&apos;ll use these as your defaults.
+            </p>
+
+            <form className="onboarding-form" onSubmit={handleStyleSubmit} noValidate>
+              <div className="style-options" role="group" aria-label="Study styles">
+                {STYLES.map((s) => {
+                  const selected = form.styles.includes(s.value)
+                  return (
+                    <button
+                      key={s.value}
+                      type="button"
+                      className={`style-chip${selected ? ' is-selected' : ''}`}
+                      aria-pressed={selected}
+                      onClick={() => toggleStyle(s.value)}
+                    >
+                      <strong>{s.label}</strong>
+                      <span>{s.hint}</span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {styleError && <span className="field-error">{styleError}</span>}
+
+              <div className="onboarding-actions">
+                <button type="button" className="onboarding-back" onClick={() => setStep(2)}>
+                  Back
+                </button>
+                <button type="submit" className="onboarding-next">
+                  Finish
+                </button>
+              </div>
+
+              {saved && (
+                <p className="onboarding-saved" role="status">
+                  You&apos;re all set!
                 </p>
               )}
             </form>
