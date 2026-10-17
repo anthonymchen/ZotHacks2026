@@ -323,4 +323,4 @@ export default function Onboarding() {
         )}
       </section>
     </main>
-  )
+  )}
