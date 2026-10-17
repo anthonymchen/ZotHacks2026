@@ -20,7 +20,7 @@ export async function createSession(data) {
     professor: data.professor || "",
     hostName: data.hostName,
     hostId: user.uid,
-    attendees: data.attendees?.length ? data.attendees : [data.hostName],
+    attendees: data.attendees || [],
     capacity: data.capacity || 8,
     waitlist: data.waitlist || [],
     tags: data.tags?.length ? data.tags : [data.style],

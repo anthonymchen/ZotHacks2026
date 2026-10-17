@@ -1,11 +1,19 @@
-import { useCallback, useLayoutEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import { INITIAL_SESSIONS, EMPTY_PROFILE, DEFAULT_SETTINGS } from './data'
 import AppShell from './components/AppShell'
 import ConfirmDialog from './components/ConfirmDialog'
 import SessionDrawer from './components/SessionDrawer'
 import Toast from './components/Toast'
 import { WaveScene, SleepScene, ThinkScene } from './components/Scenes'
-import { findConflicts, describeConflicts, openAlternatives, waitlistPosition } from './sessions.js'
+import {
+  findConflicts,
+  describeConflicts,
+  openAlternatives,
+  waitlistPosition,
+  isMember,
+  normalizeCourse,
+  hasEnded,
+} from './sessions.js'
 import { formatSessionWhen } from './time'
 import { createSession as saveSessionToFirebase } from './lib/sessions'
 import Home from './pages/Home'
@@ -122,7 +130,25 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
     }
   }
   const clearToast = useCallback(() => setToast(null), [])
-  const conflictsFor = (session) => findConflicts(session, sessions, currentUser)
+  // Re-check every minute so sessions disappear once their end time passes.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60 * 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // What the student sees: sessions that haven't ended, for classes they
+  // take (plus anything they're hosting, joined or waiting on).
+  const myCourseKeys = courses.map(normalizeCourse)
+  const visibleSessions = sessions.filter(
+    (session) =>
+      !hasEnded(session, now) &&
+      (isMember(session, currentUser) ||
+        (session.waitlist || []).includes(currentUser) ||
+        myCourseKeys.includes(normalizeCourse(session.course))),
+  )
+
+  const conflictsFor = (session) => findConflicts(session, visibleSessions, currentUser)
   const pendingJoin = sessions.find((session) => session.id === conflictId)
   const pendingConflicts = pendingJoin ? conflictsFor(pendingJoin) : []
   const openSession = sessions.find((session) => session.id === openId)
@@ -176,6 +202,7 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
         prev.map((session) => ({
           ...session,
           hostName: rename(session.hostName),
+          ownerName: session.ownerName ? rename(session.ownerName) : session.ownerName,
           attendees: session.attendees.map(rename),
         })),
       )
@@ -210,7 +237,7 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
     setSessions((prev) =>
       prev.map((session) =>
         session.id === sessionId &&
-        !session.attendees.includes(currentUser) &&
+        !isMember(session, currentUser) &&
         !(session.waitlist || []).includes(currentUser)
           ? { ...session, waitlist: [...(session.waitlist || []), currentUser] }
           : session,
@@ -249,7 +276,7 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
       prev.map((session) => {
         if (
           session.id !== sessionId ||
-          session.attendees.includes(currentUser) ||
+          isMember(session, currentUser) ||
           session.attendees.length >= session.capacity
         ) {
           return session
@@ -291,7 +318,7 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
         tab={sessionsTab}
         onTab={setSessionsTab}
         currentUser={currentUser}
-        sessions={sessions}
+        sessions={visibleSessions}
         selectedStyles={selectedStyles}
         professorQuery={professorQuery}
         courseFilter={courseFilter}
@@ -319,7 +346,7 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
         onSaveProfile={saveProfile}
         visibility={settings.profileVisibility}
         courses={courses}
-        sessions={sessions}
+        sessions={visibleSessions}
         onAddCourse={addCourse}
         onRemoveCourse={removeCourse}
         onLeave={setLeavingId}
@@ -347,7 +374,7 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
       <CreateSession
         currentUser={currentUser}
         courses={courses}
-        sessions={sessions}
+        sessions={visibleSessions}
         settings={settings}
         onCancel={() => navigate('sessions')}
         onCreated={handleCreated}
@@ -358,7 +385,7 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
       <Home
         currentUser={currentUser}
         photo={profile.photo}
-        sessions={sessions}
+        sessions={visibleSessions}
         selectedStyles={selectedStyles}
         professorQuery={professorQuery}
         courseFilter={courseFilter}
@@ -389,7 +416,7 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
         currentUser={currentUser}
         photo={profile.photo}
         conflicts={openSession ? conflictsFor(openSession) : []}
-        alternatives={openSession ? openAlternatives(openSession, sessions, currentUser) : []}
+        alternatives={openSession ? openAlternatives(openSession, visibleSessions, currentUser) : []}
         onOpen={setOpenId}
         onWaitlist={joinWaitlist}
         onLeaveWaitlist={setWaitLeavingId}

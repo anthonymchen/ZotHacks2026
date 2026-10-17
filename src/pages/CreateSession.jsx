@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { LOCATIONS, STYLES, MAX_GROUP_SIZE } from '../data'
-import { validateSession, overlaps, describeConflicts } from '../sessions.js'
+import { validateSession, overlaps, describeConflicts, isMember } from '../sessions.js'
 import { formatSessionWhen } from '../time'
 import PageBanner from '../components/PageBanner'
 import SessionCard from '../components/SessionCard'
@@ -56,7 +56,7 @@ export default function CreateSession({ currentUser, courses = [], sessions = []
 
   // Sessions you're already in (joined or hosting), soonest first.
   const mySessions = sessions
-    .filter((session) => session.attendees.includes(currentUser))
+    .filter((session) => isMember(session, currentUser))
     .sort((a, b) => new Date(a.start) - new Date(b.start))
   const draftTimes = { start: toIso(form.start), end: toIso(form.end) }
   const timesReady = Boolean(draftTimes.start && draftTimes.end) && new Date(form.end) > new Date(form.start)
@@ -91,7 +91,8 @@ export default function CreateSession({ currentUser, courses = [], sessions = []
       tags: [form.style],
       professor: form.professor.trim(),
       hostName,
-      attendees: [hostName],
+      attendees: [],
+      ownerName: currentUser,
       capacity: MAX_GROUP_SIZE,
       waitlist: [],
     }
@@ -111,7 +112,7 @@ export default function CreateSession({ currentUser, courses = [], sessions = []
     tags: [form.style],
     professor: form.professor.trim(),
     hostName: previewHost,
-    attendees: [previewHost],
+    attendees: [],
     capacity: MAX_GROUP_SIZE,
   }
 

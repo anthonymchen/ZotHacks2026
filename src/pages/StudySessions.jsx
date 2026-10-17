@@ -3,7 +3,7 @@ import SessionFilters from '../components/SessionFilters'
 import EmptyState from '../components/EmptyState'
 import PageBanner from '../components/PageBanner'
 import { BooksScene } from '../components/Scenes'
-import { filterSessions, courseOptions } from '../sessions.js'
+import { filterSessions, courseOptions, isHost, isMember } from '../sessions.js'
 
 export default function StudySessions({
   currentUser,
@@ -33,22 +33,22 @@ export default function StudySessions({
   const isHidden = (session) =>
     hideConflicts &&
     conflictsFor &&
-    !session.attendees.includes(currentUser) &&
+    !isMember(session, currentUser) &&
     conflictsFor(session).length > 0
   const filtered = matching.filter((session) => !isHidden(session))
   const hiddenCount = matching.length - filtered.length
   const byTime = (list) => [...list].sort((a, b) => new Date(a.start) - new Date(b.start))
-  const hosting = byTime(sessions.filter((session) => session.hostName === currentUser))
+  const hosting = byTime(sessions.filter((session) => isHost(session, currentUser)))
   const joined = byTime(
     sessions.filter(
-      (session) => session.attendees.includes(currentUser) && session.hostName !== currentUser,
+      (session) => session.attendees.includes(currentUser) && !isHost(session, currentUser),
     ),
   )
   const waitlisted = byTime(sessions.filter((session) => (session.waitlist || []).includes(currentUser)))
   const mineCount = hosting.length + joined.length + waitlisted.length
   // On All Sessions, sessions you host are pinned to the top.
-  const filteredHosting = filtered.filter((session) => session.hostName === currentUser)
-  const filteredOthers = filtered.filter((session) => session.hostName !== currentUser)
+  const filteredHosting = filtered.filter((session) => isHost(session, currentUser))
+  const filteredOthers = filtered.filter((session) => !isHost(session, currentUser))
 
   const card = (session) => (
     <SessionCard

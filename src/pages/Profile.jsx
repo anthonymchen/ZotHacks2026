@@ -1,3 +1,4 @@
+import { isMember, isHost } from '../sessions.js'
 import { useEffect, useRef, useState } from 'react'
 import { SUGGESTED_COURSES, STYLES, YEARS } from '../data'
 import Avatar from '../components/Avatar'
@@ -258,9 +259,9 @@ export default function Profile({
   const [saved, setSaved] = useState(false)
   const [draft, setDraft] = useState('')
   const joined = sessions
-    .filter((session) => session.attendees.includes(currentUser))
+    .filter((session) => isMember(session, currentUser))
     .sort((a, b) => new Date(a.start) - new Date(b.start))
-  const hosting = sessions.filter((session) => session.hostName === currentUser)
+  const hosting = sessions.filter((session) => isHost(session, currentUser))
 
   useEffect(() => {
     if (!saved) return undefined

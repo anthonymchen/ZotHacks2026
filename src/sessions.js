@@ -30,11 +30,31 @@ export function overlaps(a, b) {
   return aStart < bEnd && bStart < aEnd
 }
 
+// The host isn't counted as an attendee: a new session starts at 0 joined.
+export function isHost(session, user) {
+  return session.hostName === user || session.ownerName === user
+}
+
+// Hosting or joined.
+export function isMember(session, user) {
+  return isHost(session, user) || session.attendees.includes(user)
+}
+
+// "math 2b", "MATH 2B" and "Math  2B" are the same course.
+export function normalizeCourse(course) {
+  return String(course || '').trim().replace(/\s+/g, ' ').toUpperCase()
+}
+
+export function hasEnded(session, now = Date.now()) {
+  const end = new Date(session.end).getTime()
+  return !Number.isNaN(end) && end <= now
+}
+
 // Sessions the user is already in (joined or hosting) that clash with this one.
 export function findConflicts(session, sessions, user) {
-  if (session.attendees.includes(user)) return []
+  if (isMember(session, user)) return []
   return sessions.filter(
-    (other) => other.id !== session.id && other.attendees.includes(user) && overlaps(session, other),
+    (other) => other.id !== session.id && isMember(other, user) && overlaps(session, other),
   )
 }
 
@@ -60,7 +80,7 @@ export function openAlternatives(session, sessions, user) {
       (other) =>
         other.id !== session.id &&
         other.course === session.course &&
-        !other.attendees.includes(user) &&
+        !isMember(other, user) &&
         !isFull(other),
     )
     .sort((a, b) => new Date(a.start) - new Date(b.start))

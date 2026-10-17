@@ -1,5 +1,5 @@
 import { formatSessionWhen, initials } from '../time'
-import { isFull, describeConflicts, waitlistPosition } from '../sessions.js'
+import { isFull, describeConflicts, waitlistPosition, isHost, isMember } from '../sessions.js'
 
 export default function SessionCard({
   session,
@@ -13,8 +13,8 @@ export default function SessionCard({
   conflicts = [],
   compact = false,
 }) {
-  const joined = session.attendees.includes(currentUser)
-  const hosting = joined && session.hostName === currentUser
+  const joined = isMember(session, currentUser)
+  const hosting = isHost(session, currentUser)
   const full = !joined && isFull(session)
   const conflict = !joined && conflicts.length > 0
   const waitPos = joined ? 0 : waitlistPosition(session, currentUser)

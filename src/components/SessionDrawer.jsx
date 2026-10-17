@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import Avatar from './Avatar'
 import { formatSessionWhen } from '../time'
-import { isFull, describeConflicts, waitlistPosition } from '../sessions.js'
+import { isFull, describeConflicts, waitlistPosition, isHost, isMember } from '../sessions.js'
 import { STUDY_BUDDIES } from '../data'
 
 // Look up a little more about an attendee (full name, study style) when we have it.
@@ -39,16 +39,17 @@ export default function SessionDrawer({
 
   if (!session) return null
 
-  const joined = session.attendees.includes(currentUser)
-  const hosting = joined && session.hostName === currentUser
+  const joined = isMember(session, currentUser)
+  const hosting = isHost(session, currentUser)
   const full = !joined && isFull(session)
-  const capacity = session.capacity || session.attendees.length
+  const capacity = session.capacity || Math.max(session.attendees.length, 1)
   const spotsLeft = Math.max(capacity - session.attendees.length, 0)
   const fill = Math.min(session.attendees.length / capacity, 1)
   const waitlist = session.waitlist || []
   const waitPos = joined ? 0 : waitlistPosition(session, currentUser)
-  // Host first, then you, then everyone else.
-  const people = [...session.attendees].sort((a, b) => {
+  // Host first, then you, then everyone else. The host isn't an attendee,
+  // so they're listed here but not counted in the spots.
+  const people = [session.hostName, ...session.attendees.filter((name) => name !== session.hostName)].sort((a, b) => {
     const rank = (name) => (name === session.hostName ? 0 : name === currentUser ? 1 : 2)
     return rank(a) - rank(b)
   })
