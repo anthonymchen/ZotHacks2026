@@ -2,6 +2,7 @@ import { useState } from 'react'
 import './Onboarding.css'
 import { saveProfile } from '../lib/users'
 
+
 const MAJORS = [
   'Computer Science',
   'Software Engineering',
