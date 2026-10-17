@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { LOCATIONS, STYLES, MAX_GROUP_SIZE } from '../data'
-import { validateSession, overlaps, describeConflicts, isMember } from '../sessions.js'
+import { validateSession, overlaps, describeConflicts, isMember, formatPhone } from '../sessions.js'
 import { formatSessionWhen } from '../time'
 import PageBanner from '../components/PageBanner'
 import SessionCard from '../components/SessionCard'
@@ -40,7 +40,15 @@ function dayTile(iso) {
   }
 }
 
-export default function CreateSession({ currentUser, courses = [], sessions = [], settings = {}, onCancel, onCreated }) {
+export default function CreateSession({
+  currentUser,
+  courses = [],
+  sessions = [],
+  settings = {},
+  savedPhone = '',
+  onCancel,
+  onCreated,
+}) {
   const length = settings.defaultLength || 60
   const [form, setForm] = useState({
     course: courses[0] || '',
@@ -50,6 +58,7 @@ export default function CreateSession({ currentUser, courses = [], sessions = []
     style: STYLES.includes(settings.defaultStyle) ? settings.defaultStyle : STYLES[0],
     professor: '',
     hostName: currentUser,
+    hostPhone: savedPhone,
   })
   const [errors, setErrors] = useState({})
   const [confirmingClash, setConfirmingClash] = useState(false)
@@ -81,6 +90,7 @@ export default function CreateSession({ currentUser, courses = [], sessions = []
 
   function createSession() {
     const hostName = form.hostName.trim()
+    const hostPhone = formatPhone(form.hostPhone)
     const session = {
       id: crypto.randomUUID(),
       course: form.course.trim(),
@@ -91,6 +101,8 @@ export default function CreateSession({ currentUser, courses = [], sessions = []
       tags: [form.style],
       professor: form.professor.trim(),
       hostName,
+      hostPhone,
+      contacts: [{ name: hostName, phone: hostPhone }],
       attendees: [],
       ownerName: currentUser,
       capacity: MAX_GROUP_SIZE,
@@ -230,6 +242,19 @@ export default function CreateSession({ currentUser, courses = [], sessions = []
               aria-invalid={Boolean(errors.hostName)}
             />
             {errors.hostName ? <p className="error">{errors.hostName}</p> : null}
+            <label htmlFor="hostPhone">Phone Number</label>
+            <input
+              id="hostPhone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="(949) 555-0123"
+              value={form.hostPhone}
+              onChange={(event) => update('hostPhone', event.target.value)}
+              aria-invalid={Boolean(errors.hostPhone)}
+            />
+            {errors.hostPhone ? <p className="error">{errors.hostPhone}</p> : null}
+            <p className="hint">Only people who join your session can see your number.</p>
             <p className="hint">Groups hold up to {MAX_GROUP_SIZE} people, including you.</p>
           </fieldset>
 

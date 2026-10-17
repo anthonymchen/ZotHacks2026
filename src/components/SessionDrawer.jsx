@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import Avatar from './Avatar'
 import { formatSessionWhen } from '../time'
-import { isFull, describeConflicts, isHost, isMember, headcount } from '../sessions.js'
+import { isFull, describeConflicts, isHost, isMember, headcount, contactFor } from '../sessions.js'
 import { STUDY_BUDDIES } from '../data'
 
 // Look up a little more about an attendee (full name, study style) when we have it.
@@ -122,6 +122,7 @@ export default function SessionDrawer({
           <h3 className="people-title">
             Who's Going <span className="tab-count">{count}</span>
           </h3>
+          {!joined ? <p className="people-note">Join to see everyone's phone number.</p> : null}
           <ul className="people-list">
             {people.map((name) => {
               const info = personInfo(name)
@@ -131,7 +132,11 @@ export default function SessionDrawer({
                   <Avatar name={info?.name || name} photo={isYou ? photo : ''} />
                   <span className="person-text">
                     <span className="person-name">{isYou ? `${name} (you)` : info?.name || name}</span>
-                    {info ? (
+                    {joined && contactFor(session, name) ? (
+                      <a className="person-phone" href={`tel:${contactFor(session, name).replace(/[^\d+]/g, '')}`}>
+                        {contactFor(session, name)}
+                      </a>
+                    ) : info ? (
                       <span className="person-sub">
                         <span className="style-dot" data-style={info.style} />
                         Prefers {info.style}

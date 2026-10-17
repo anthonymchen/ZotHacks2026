@@ -21,6 +21,9 @@ export async function createSession(data) {
     professor: data.professor || "",
     hostName: data.hostName,
     hostId: user.uid,
+    hostPhone: data.hostPhone || "",
+    // Phone numbers shared by everyone in the session: [{ name, phone }]
+    contacts: data.contacts || (data.hostPhone ? [{ name: data.hostName, phone: data.hostPhone }] : []),
     attendees: data.attendees || [],
     capacity: data.capacity || 8,
     waitlist: data.waitlist || [],
@@ -68,6 +71,7 @@ function toAppSession(snapshot, uid) {
     start,
     end,
     attendees: s.attendees || [],
+    contacts: s.contacts || [],
     capacity: s.capacity || 8,
     tags: s.tags?.length ? s.tags : [s.style],
     mine: Boolean(uid && s.hostId === uid),
@@ -96,20 +100,20 @@ export function subscribeSessions(onChange, onError) {
   };
 }
 
-// user: { name } (the display name that gets added to attendees)
+// user: { name, phone? } (name is added to attendees, phone to contacts)
 export async function joinSession(id, user) {
   await ensureSignedIn();
-  await updateDoc(doc(db, "sessions", id), {
-    attendees: arrayUnion(user.name),
-  });
+  const changes = { attendees: arrayUnion(user.name) };
+  if (user.phone) changes.contacts = arrayUnion({ name: user.name, phone: user.phone });
+  await updateDoc(doc(db, "sessions", id), changes);
 }
 
-// user: { name } (the display name removed from attendees)
+// user: { name, contacts? } (removes the name and that person's phone entries)
 export async function leaveSession(id, user) {
   await ensureSignedIn();
-  await updateDoc(doc(db, "sessions", id), {
-    attendees: arrayRemove(user.name),
-  });
+  const changes = { attendees: arrayRemove(user.name) };
+  if (user.contacts?.length) changes.contacts = arrayRemove(...user.contacts);
+  await updateDoc(doc(db, "sessions", id), changes);
 }
 
 // Removes the session for everyone (host only).

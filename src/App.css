@@ -3425,3 +3425,48 @@
   border: 0;
 }
 
+/* ---------- Phone numbers ---------- */
+.phone-dialog .dialog-label {
+  display: block;
+  margin: 16px 0 6px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.phone-dialog input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-h);
+  font: inherit;
+}
+
+.phone-dialog input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-tint);
+}
+
+.phone-dialog .error {
+  margin-top: 6px;
+}
+
+.person-phone {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand-soft-text);
+  text-decoration: none;
+}
+
+.person-phone:hover {
+  text-decoration: underline;
+}
+
+.people-note {
+  margin: -4px 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+

@@ -96,7 +96,31 @@ export function isFull(session) {
   return Boolean(session.capacity) && headcount(session) >= session.capacity
 }
 
-export function validateSession({ course, start, end, hostName }) {
+// Phone numbers: 10 digits (US) or 11-15 digits with a country code.
+export function phoneProblem(value) {
+  const digits = String(value || '').replace(/\D/g, '')
+  if (!digits) return 'Add a phone number so your group can reach you.'
+  if (digits.length < 10 || digits.length > 15) return 'Enter a valid phone number, like (949) 555-0123.'
+  return ''
+}
+
+// (949) 555-0123 for US numbers, +44 7911 123456 style otherwise.
+export function formatPhone(value) {
+  const raw = String(value || '').trim()
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+  if (digits.length === 11 && digits.startsWith('1')) return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
+  return raw.startsWith('+') ? raw : `+${digits}`
+}
+
+// Phone number someone shared when they joined or created the session.
+export function contactFor(session, name) {
+  const entry = (session.contacts || []).find((contact) => contact.name === name)
+  if (entry) return entry.phone
+  return name === session.hostName ? session.hostPhone || '' : ''
+}
+
+export function validateSession({ course, start, end, hostName, hostPhone }) {
   const errors = {}
   if (!course.trim()) {
     errors.course = 'Course cannot be empty.'
@@ -111,6 +135,10 @@ export function validateSession({ course, start, end, hostName }) {
   }
   if (!hostName.trim()) {
     errors.hostName = 'Host name cannot be empty.'
+  }
+  const phoneIssue = phoneProblem(hostPhone)
+  if (phoneIssue) {
+    errors.hostPhone = phoneIssue
   }
   return errors
 }

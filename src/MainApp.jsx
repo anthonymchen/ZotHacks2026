@@ -4,6 +4,7 @@ import AppShell from './components/AppShell'
 import ConfirmDialog from './components/ConfirmDialog'
 import SessionDrawer from './components/SessionDrawer'
 import Toast from './components/Toast'
+import PhoneDialog from './components/PhoneDialog'
 import { WaveScene, SleepScene, ThinkScene } from './components/Scenes'
 import {
   findConflicts,
@@ -40,6 +41,15 @@ const DEMO_USER = 'Alex'
 const DEMO_COURSES = ['ICS 31', 'Math 2B', 'Writing 39C']
 const SETTINGS_KEY = 'zotstudy-settings'
 const ONBOARDING_KEY = 'zotstudy-onboarding'
+const PHONE_KEY = 'zotstudy-phone'
+
+function loadPhone() {
+  try {
+    return window.localStorage.getItem(PHONE_KEY) || ''
+  } catch {
+    return ''
+  }
+}
 
 // Keep the student's classes after a reload: update the profile saved in
 // this browser and the "users" record in Firebase (stored as a list, so
@@ -100,6 +110,10 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
   const [sessionsTab, setSessionsTab] = useState('all')
   const [openId, setOpenId] = useState(null)
   const [conflictId, setConflictId] = useState(null)
+  // Joining asks for a phone number first.
+  const [joiningId, setJoiningId] = useState(null)
+  const joining = sessions.find((session) => session.id === joiningId)
+  const [savedPhone, setSavedPhone] = useState(loadPhone)
   const [toast, setToast] = useState(null)
   const [settings, setSettings] = useState(loadSettings)
   const [settingsDialog, setSettingsDialog] = useState(null) // 'reset' | 'delete'
@@ -280,11 +294,23 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
     setProfile(details)
   }
 
+  // Remember the last phone number used, here and on the user's record.
+  function rememberPhone(phone) {
+    setSavedPhone(phone)
+    try {
+      window.localStorage.setItem(PHONE_KEY, phone)
+    } catch {
+      // Storage blocked: still saved to Firebase below.
+    }
+    saveUserToFirebase({ phone }).catch((error) => console.error('Could not save phone to Firebase', error))
+  }
+
   function leaveSession(sessionId) {
     const target = sessions.find((session) => session.id === sessionId)
     if (!target) return
+    const myContacts = (target.contacts || []).filter((contact) => contact.name === currentUser)
     if (live && target.firebaseId) {
-      leaveSessionInFirebase(target.firebaseId, { name: currentUser }).catch((error) => {
+      leaveSessionInFirebase(target.firebaseId, { name: currentUser, contacts: myContacts }).catch((error) => {
         console.error('Could not leave session in Firebase', error)
         notify("Couldn't leave the session. Check your connection and try again.")
       })
@@ -293,13 +319,18 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
     setSessions((prev) =>
       prev.map((session) =>
         session.id === sessionId
-          ? { ...session, attendees: session.attendees.filter((name) => name !== currentUser) }
+          ? {
+              ...session,
+              attendees: session.attendees.filter((name) => name !== currentUser),
+              contacts: (session.contacts || []).filter((contact) => contact.name !== currentUser),
+            }
           : session,
       ),
     )
   }
 
   const closeDrawer = useCallback(() => setOpenId(null), [])
+  const closeJoin = useCallback(() => setJoiningId(null), [])
 
   function endSession(sessionId) {
     const target = sessions.find((session) => session.id === sessionId)
@@ -320,12 +351,12 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
       setConflictId(sessionId)
       return
     }
-    joinSession(sessionId)
+    setJoiningId(sessionId)
   }
 
   // Joining is instant: you're added to the attendees in Firebase and the
   // host gets a notification.
-  function joinSession(sessionId) {
+  function joinSession(sessionId, phone) {
     const target = sessions.find((session) => session.id === sessionId)
     if (!target || isMember(target, currentUser)) return
     if (isFull(target)) {
@@ -333,7 +364,7 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
       return
     }
     if (live && target.firebaseId) {
-      joinSessionInFirebase(target.firebaseId, { name: currentUser })
+      joinSessionInFirebase(target.firebaseId, { name: currentUser, phone })
         .then(() => notify(`You joined the ${target.course} study session.`))
         .catch((error) => {
           console.error('Could not join session in Firebase', error)
@@ -343,7 +374,13 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
     }
     setSessions((prev) =>
       prev.map((session) =>
-        session.id === sessionId ? { ...session, attendees: [...session.attendees, currentUser] } : session,
+        session.id === sessionId
+          ? {
+              ...session,
+              attendees: [...session.attendees, currentUser],
+              contacts: [...(session.contacts || []), { name: currentUser, phone }],
+            }
+          : session,
       ),
     )
   }
@@ -355,6 +392,7 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
   }
 
   function handleCreated(session) {
+    if (session.hostPhone) rememberPhone(session.hostPhone)
     // Save to the "sessions" collection in Firebase. While connected, the
     // live listener adds it to the list; otherwise it's kept on this device.
     saveSessionToFirebase(session)
@@ -432,6 +470,7 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
         courses={courses}
         sessions={visibleSessions}
         settings={settings}
+        savedPhone={savedPhone}
         onCancel={() => navigate('sessions')}
         onCreated={handleCreated}
       />
@@ -493,8 +532,19 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
         illustration={<ThinkScene />}
         onCancel={() => setConflictId(null)}
         onConfirm={() => {
-          joinSession(conflictId)
+          setJoiningId(conflictId)
           setConflictId(null)
+        }}
+      />
+      <PhoneDialog
+        open={Boolean(joining)}
+        course={joining?.course || ''}
+        initialPhone={savedPhone}
+        onCancel={closeJoin}
+        onConfirm={(phone) => {
+          rememberPhone(phone)
+          joinSession(joiningId, phone)
+          setJoiningId(null)
         }}
       />
       <Toast toast={toast} onDone={clearToast} />
