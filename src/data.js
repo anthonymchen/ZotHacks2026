@@ -185,4 +185,12 @@ export const STUDY_BUDDIES = [
   { id: 'b2', name: 'Sam Ortiz', courses: ['Math 2B', 'ICS 31'], style: 'Quiet' },
   { id: 'b3', name: 'Priya Shah', courses: ['Writing 39C'], style: 'Silent' },
   { id: 'b4', name: 'Jordan Lee', courses: ['ICS 31', 'Writing 39C'], style: 'Practice Problems' },
+  { id: 'b5', name: 'Diego Ramirez', courses: ['Math 2A', 'Physics 7C'], style: 'Quiet' },
+  { id: 'b6', name: 'Hannah Park', courses: ['ICS 33', 'ICS 6B'], style: 'Exam Review' },
+  { id: 'b7', name: 'Omar Haddad', courses: ['Physics 7C', 'Chem 1A'], style: 'Practice Problems' },
+  { id: 'b8', name: 'Lily Nguyen', courses: ['Bio Sci 93', 'Chem 1A'], style: 'Collaborative' },
+  { id: 'b9', name: 'Ethan Brooks', courses: ['ICS 6B', 'Math 2B'], style: 'Silent' },
+  { id: 'b10', name: 'Zoe Martinez', courses: ['Writing 39C', 'Psych 7A'], style: 'Quiet' },
+  { id: 'b11', name: 'Kai Thompson', courses: ['ICS 33', 'ICS 46'], style: 'Collaborative' },
+  { id: 'b12', name: 'Aisha Rahman', courses: ['Math 2A', 'Stats 7'], style: 'Exam Review' },
 ]
