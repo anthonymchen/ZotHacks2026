@@ -177,6 +177,8 @@ export default function Onboarding() {
     console.log('Onboarding complete', profile)
 
     try {
+      // The whole account goes into the "users" collection.
+      const signedIn = getCurrentUser()
       await saveProfile({
         name: profile.name,
         email: profile.email,
@@ -185,6 +187,10 @@ export default function Onboarding() {
         courses: profile.courses,
         styles: profile.styles,
         onboarded: true,
+        accountId: signedIn?.id || profile.email.trim().toLowerCase(),
+        loginMethod: signedIn?.email ? 'google' : signedIn?.name ? 'username' : 'signup',
+        username: signedIn && !signedIn.email ? signedIn.name : '',
+        onboardedAt: new Date().toISOString(),
       })
     } catch (err) {
       console.error('Could not save study style to Firebase', err)

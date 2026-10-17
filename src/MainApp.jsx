@@ -7,6 +7,7 @@ import Toast from './components/Toast'
 import { WaveScene, SleepScene, ThinkScene } from './components/Scenes'
 import { findConflicts, describeConflicts, openAlternatives, waitlistPosition } from './sessions.js'
 import { formatSessionWhen } from './time'
+import { createSession as saveSessionToFirebase } from './lib/sessions'
 import Home from './pages/Home'
 import StudyBuddies from './pages/StudyBuddies'
 import StudySessions from './pages/StudySessions'
@@ -265,6 +266,17 @@ export default function MainApp({ user = DEMO_USER, courses: initialCourses = DE
   }
 
   function handleCreated(session) {
+    // Save to the "sessions" collection in Firebase. The session shows up
+    // right away; if saving fails it stays on this device and we say so.
+    saveSessionToFirebase(session)
+      .then((firebaseId) => {
+        setSessions((prev) => prev.map((item) => (item.id === session.id ? { ...item, firebaseId } : item)))
+        notify(`Your ${session.course} session was saved.`)
+      })
+      .catch((error) => {
+        console.error('Could not save session to Firebase', error)
+        notify("Couldn't save your session to the server. It's only on this device for now.")
+      })
     setSessions((prev) => [session, ...prev])
     setSessionsTab('mine')
     setPage('sessions')

@@ -1,12 +1,13 @@
 import {
   collection, addDoc, getDocs, doc, updateDoc,
-  arrayUnion, Timestamp, query, orderBy,
+  arrayUnion, Timestamp, query, orderBy, serverTimestamp,
 } from "firebase/firestore";
 import { db, ensureSignedIn } from "../firebase";
 
 const sessionsRef = collection(db, "sessions");
 
-// data: { course, location, start, end, style, professor, hostName }
+// data: { course, location, start, end, style, professor, hostName,
+//         capacity?, waitlist?, tags? }
 // start and end can be Date objects or ISO strings from datetime-local.
 export async function createSession(data) {
   const user = await ensureSignedIn();
@@ -19,7 +20,11 @@ export async function createSession(data) {
     professor: data.professor || "",
     hostName: data.hostName,
     hostId: user.uid,
-    attendees: [data.hostName],
+    attendees: data.attendees?.length ? data.attendees : [data.hostName],
+    capacity: data.capacity || 8,
+    waitlist: data.waitlist || [],
+    tags: data.tags?.length ? data.tags : [data.style],
+    createdAt: serverTimestamp(),
   });
   return docRef.id;
 }
