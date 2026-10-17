@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { suggestCourses, findCourse, canonicalCourse } from '../lib/uciCourses'
+import { suggestCourses, findCourse, canonicalCourse, getDepartments } from '../lib/uciCourses'
 import './CourseSearch.css'
 
 // A course box that suggests real UCI courses as you type (from Anteater API)
@@ -140,7 +140,8 @@ export default function CourseSearch({
     }
   }
 
-  const showList = open && text.trim() && (items.length > 0 || status)
+  const empty = !text.trim()
+  const showList = open && (empty || items.length > 0 || status)
 
   return (
     <div className="course-search">
@@ -161,7 +162,10 @@ export default function CourseSearch({
         value={text}
         onChange={(event) => setText(event.target.value)}
         onKeyDown={handleKeyDown}
-        onFocus={() => setOpen(true)}
+        onFocus={() => {
+          setOpen(true)
+          getDepartments().catch(() => {}) // warm up so the first suggestions are quick
+        }}
         onBlur={() => setTimeout(() => setOpen(false), 120)}
       />
       {showList ? (
@@ -182,7 +186,15 @@ export default function CourseSearch({
               {item.type === 'dept' ? <em>Department</em> : already(item.code) ? <em>Added</em> : null}
             </li>
           ))}
-          {status === 'loading' && items.length === 0 ? <li className="course-status">Searching UCI courses…</li> : null}
+          {empty ? (
+            <li className="course-status">
+              Start typing a UCI course or department, like <strong>MATH 2A</strong>, <strong>I&amp;C SCI 31</strong> or{' '}
+              <strong>CS 161</strong>.
+            </li>
+          ) : null}
+          {!empty && status === 'loading' && items.length === 0 ? (
+            <li className="course-status">Searching UCI courses…</li>
+          ) : null}
           {status === 'none' ? <li className="course-status">No UCI courses match "{text.trim()}".</li> : null}
           {status === 'offline' ? (
             <li className="course-status">Couldn't reach UCI's course list right now.</li>

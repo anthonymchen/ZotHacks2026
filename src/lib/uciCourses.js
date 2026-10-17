@@ -3,6 +3,7 @@
 // exists before it's added. No API key needed (about 1,000 requests per
 // hour per visitor). Results are cached for the browser session.
 const API = 'https://anteaterapi.com/v2/rest'
+const GRAPHQL = 'https://anteaterapi.com/v2/graphql'
 
 // Everyday names for departments -> UCI's official codes.
 const ALIASES = {
@@ -113,10 +114,54 @@ function findDepartment(text, departments) {
 
 const byNumber = (a, b) => a.numeric - b.numeric || a.number.localeCompare(b.number)
 
+// GraphQL lets us ask for just the fields we need (about 20x smaller than REST).
+async function getDepartmentPageGraphql(deptCode, skip) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 10000)
+  try {
+    const response = await fetch(GRAPHQL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        query:
+          'query ($department: String!, $skip: Int!) { courses(query: { department: $department, take: 100, skip: $skip }) { department courseNumber courseNumeric title } }',
+        variables: { department: deptCode, skip },
+      }),
+    })
+    const body = await response.json()
+    if (!response.ok || body.errors?.length || !body.data) throw new Error('Anteater API GraphQL error')
+    return body.data.courses || []
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 // Every course in one department (slimmed down): [{ code, number, title }]
 export function getDepartmentCourses(deptCode) {
   return cached(`uci-courses:${deptCode}`, async () => {
     const courses = []
+    try {
+      // Load 3 pages at once (covers almost every department), then any extra.
+      let page = 0
+      let more = true
+      while (more && page < 9) {
+        const batch = await Promise.all([0, 1, 2].map((i) => getDepartmentPageGraphql(deptCode, (page + i) * 100)))
+        batch.flat().forEach((course) =>
+          courses.push({
+            code: `${course.department} ${course.courseNumber}`,
+            number: course.courseNumber,
+            numeric: course.courseNumeric ?? 0,
+            title: course.title,
+          }),
+        )
+        more = batch[2].length === 100
+        page += 3
+      }
+      return courses.sort(byNumber)
+    } catch {
+      courses.length = 0 // GraphQL unavailable: fall back to the REST API below.
+    }
     for (let page = 0; page < 8; page += 1) {
       const data = await getJson(
         `/courses?department=${encodeURIComponent(deptCode)}&take=100&skip=${page * 100}`,

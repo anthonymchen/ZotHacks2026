@@ -335,7 +335,7 @@ export default function Onboarding() {
                   <span>Course <span className="required" aria-hidden="true">*</span></span>
                   <CourseSearch
                     ariaLabel="Course"
-                    placeholder="MATH 2A"
+                    placeholder="Search UCI courses, e.g. MATH 2A"
                     value={courseInput.code}
                     existing={form.courses.map((c) => c.code)}
                     onChange={(text) => {
