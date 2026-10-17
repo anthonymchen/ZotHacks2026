@@ -105,37 +105,30 @@ export default function Onboarding() {
     setSaved(false)
   }
 
-  function handleClassesSubmit(event) {
+  async function handleClassesSubmit(event) {
     event.preventDefault()
     if (!form.courses.length) {
       setCourseError('Add at least one class')
       return
     }
+
     const profile = { ...form, step: 'classes' }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(profile))
     console.log('Onboarding classes', profile)
-    setSaved(true)
-  }
 
-    const profile = {
-      ...form,
-      name: form.name.trim(),
-      email: form.email.trim(),
-      step: 'student-info',
-    }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(profile))
-    console.log('Onboarding student info', profile)
-        try {
+    try {
       await saveProfile({
         name: profile.name,
         email: profile.email,
         major: profile.major,
         year: profile.year,
+        courses: profile.courses,
       })
     } catch (err) {
-      console.error('Could not save profile to Firebase', err)
+      console.error('Could not save classes to Firebase', err)
     }
-    setStep(2)
+
+    setSaved(true)
   }
 
   return (
@@ -331,4 +324,3 @@ export default function Onboarding() {
       </section>
     </main>
   )
-}
