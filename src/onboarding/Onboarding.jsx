@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import './Onboarding.css'
 
+
 const MAJORS = [
   'Computer Science',
   'Software Engineering',
