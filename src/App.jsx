@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
 import Login from './Login.jsx'
 import Onboarding from './onboarding/Onboarding.jsx'
 import MainApp from './MainApp.jsx'
+import { getCurrentUser, clearCurrentUser } from './currentUser'
 
 // Name and classes saved by onboarding (Onboarding.jsx stores them here).
 function onboardingProfile() {
@@ -12,16 +13,26 @@ function onboardingProfile() {
   }
 }
 
-// The main app greets the student by the name and classes they entered
-// during onboarding, and Log Out goes back to the login page.
+// The main app greets whoever signed in (login page or onboarding) and
+// loads the classes from onboarding. Log Out goes back to the login page.
 function MainAppRoute() {
   const navigate = useNavigate()
+  const signedIn = getCurrentUser()
   const saved = onboardingProfile()
   const props = {}
-  if (saved?.name?.trim()) props.user = saved.name.trim()
+  const name = signedIn?.name?.trim() || saved?.name?.trim()
+  if (name) props.user = name
   const courses = (saved?.courses || []).map((course) => course.code).filter(Boolean)
   if (courses.length) props.courses = courses
-  return <MainApp {...props} onLogout={() => navigate('/')} />
+  return (
+    <MainApp
+      {...props}
+      onLogout={() => {
+        clearCurrentUser()
+        navigate('/')
+      }}
+    />
+  )
 }
 
 function App() {

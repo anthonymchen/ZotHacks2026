@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Onboarding.css'
 import { saveProfile } from '../lib/users'
+import { setCurrentUser } from '../currentUser'
 
 
 const MAJORS = [
@@ -179,6 +180,7 @@ export default function Onboarding() {
     }
 
     setSaved(true)
+    setCurrentUser({ name: profile.name.trim(), email: profile.email.trim() })
     // Show "You're all set!" for a moment, then open the main app.
     setTimeout(() => navigate('/home'), 900)
   }
