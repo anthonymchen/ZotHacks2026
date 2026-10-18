@@ -111,6 +111,24 @@ export function subscribeSessions(onChange, onError, accountId = "") {
   };
 }
 
+// The database's security rules may only allow changing the attendee list.
+// Try the full update first; if the rules refuse it, save just the attendee
+// change so joining and leaving still work.
+const refused = (error) => error?.code === "permission-denied";
+
+async function updateAttendees(id, changes) {
+  const ref = doc(db, "sessions", id);
+  try {
+    await updateDoc(ref, changes);
+    return true;
+  } catch (error) {
+    if (!refused(error) || Object.keys(changes).length === 1) throw error;
+    console.warn("Firestore rules only allow attendee changes; saving the name only.", error);
+    await updateDoc(ref, { attendees: changes.attendees });
+    return false;
+  }
+}
+
 // user: { name, id?, phone? } (name is added to attendees, the account id to
 // memberIds, phone to contacts)
 export async function joinSession(id, user) {
@@ -118,7 +136,7 @@ export async function joinSession(id, user) {
   const changes = { attendees: arrayUnion(user.name) };
   if (user.id) changes.memberIds = arrayUnion(user.id);
   if (user.phone) changes.contacts = arrayUnion({ name: user.name, phone: user.phone });
-  await updateDoc(doc(db, "sessions", id), changes);
+  return updateAttendees(id, changes);
 }
 
 // user: { name, id?, contacts? } (removes the name, account id and that
@@ -128,14 +146,22 @@ export async function leaveSession(id, user) {
   const changes = { attendees: arrayRemove(user.name) };
   if (user.id) changes.memberIds = arrayRemove(user.id);
   if (user.contacts?.length) changes.contacts = arrayRemove(...user.contacts);
-  await updateDoc(doc(db, "sessions", id), changes);
+  return updateAttendees(id, changes);
 }
 
 // Ends a session for everyone. The database's security rules don't allow
 // deleting sessions, so it's marked as ended (which hides it) instead.
+// If the rules refuse that, try deleting it; if that's refused too, the error
+// is passed on (code "permission-denied").
 export async function endSession(id) {
   await ensureSignedIn();
-  await updateDoc(doc(db, "sessions", id), { ended: true, endedAt: serverTimestamp() });
+  const ref = doc(db, "sessions", id);
+  try {
+    await updateDoc(ref, { ended: true, endedAt: serverTimestamp() });
+  } catch (error) {
+    if (!refused(error)) throw error;
+    await deleteDoc(ref);
+  }
 }
 
 // After a name change, show the new name in a session's lists.
@@ -144,7 +170,7 @@ export async function renameInSession(id, { oldName, newName, attendees = [], ho
   await ensureSignedIn();
   const changes = { attendees: attendees.map((name) => (name === oldName ? newName : name)) };
   if (hosting) changes.hostName = newName;
-  await updateDoc(doc(db, "sessions", id), changes);
+  return updateAttendees(id, changes);
 }
 
 // Removes the session document entirely. The current security rules refuse

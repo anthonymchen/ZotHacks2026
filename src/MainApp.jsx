@@ -377,7 +377,11 @@ export default function MainApp({
         .then(() => notify(`Your ${target.course} session was ended.`))
         .catch((error) => {
           console.error('Could not end session in Firebase', error)
-          notify("Couldn't end the session. Check your connection and try again.")
+          notify(
+            error?.code === 'permission-denied'
+              ? "Couldn't end the session: the database's security rules don't allow it yet."
+              : "Couldn't end the session. Check your connection and try again.",
+          )
         })
       return
     }

@@ -49,11 +49,9 @@ export function headcount(session) {
 }
 
 // Hosting or joined.
-// Joined by account (memberIds) when the session tracks accounts, otherwise
-// by name.
+// Joined by account (memberIds) when that could be saved, otherwise by name.
 export function isMember(session, user) {
-  if (isHost(session, user) || session.joinedByMe) return true
-  return session.attendees.includes(user) && !(session.memberIds && session.hostAccount)
+  return isHost(session, user) || Boolean(session.joinedByMe) || session.attendees.includes(user)
 }
 
 // "math 2b", "MATH 2B" and "Math  2B" are the same course, and everyday
