@@ -88,7 +88,7 @@ export default function SessionDrawer({
             </div>
             <div>
               <dt>Host</dt>
-              <dd>{session.hostName === currentUser ? `${session.hostName} (you)` : session.hostName}</dd>
+              <dd>{hosting ? `${session.hostName} (you)` : session.hostName}</dd>
             </div>
             <div>
               <dt>Professor</dt>

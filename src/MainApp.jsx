@@ -21,7 +21,8 @@ import {
   subscribeSessions,
   joinSession as joinSessionInFirebase,
   leaveSession as leaveSessionInFirebase,
-  deleteSession as deleteSessionInFirebase,
+  endSession as endSessionInFirebase,
+  renameInSession as renameInFirebaseSession,
 } from './lib/sessions'
 import { saveProfile as saveUserToFirebase } from './lib/users'
 import { saveAccount, deleteAccount } from './accountData'
@@ -231,9 +232,10 @@ export default function MainApp({
         setLive(false)
         setSessions((prev) => (prev.length ? prev : INITIAL_SESSIONS))
       },
+      accountId,
     )
     return stop
-  }, [])
+  }, [accountId])
 
   // Save the class list whenever it changes (not on first load).
   const coursesLoaded = useRef(false)
@@ -298,8 +300,21 @@ export default function MainApp({
   function saveProfile({ name, ...details }) {
     const oldName = currentUser
     if (name !== oldName) {
-      // Keep the user's joined and hosted sessions linked to the new name.
+      // Keep the user's joined and hosted sessions linked to the new name,
+      // in Firebase too so other people see it and it survives a reload.
       const rename = (person) => (person === oldName ? name : person)
+      if (live) {
+        sessions
+          .filter((session) => session.firebaseId && isMember(session, oldName))
+          .forEach((session) => {
+            renameInFirebaseSession(session.firebaseId, {
+              oldName,
+              newName: name,
+              attendees: session.attendees,
+              hosting: isHost(session, oldName),
+            }).catch((error) => console.error('Could not rename in session', error))
+          })
+      }
       setSessions((prev) =>
         prev.map((session) => ({
           ...session,
@@ -333,7 +348,7 @@ export default function MainApp({
     if (!target) return
     const myContacts = (target.contacts || []).filter((contact) => contact.name === currentUser)
     if (live && target.firebaseId) {
-      leaveSessionInFirebase(target.firebaseId, { name: currentUser, contacts: myContacts }).catch((error) => {
+      leaveSessionInFirebase(target.firebaseId, { name: currentUser, id: accountId, contacts: myContacts }).catch((error) => {
         console.error('Could not leave session in Firebase', error)
         notify("Couldn't leave the session. Check your connection and try again.")
       })
@@ -358,10 +373,12 @@ export default function MainApp({
   function endSession(sessionId) {
     const target = sessions.find((session) => session.id === sessionId)
     if (live && target?.firebaseId) {
-      deleteSessionInFirebase(target.firebaseId).catch((error) => {
-        console.error('Could not end session in Firebase', error)
-        notify("Couldn't end the session. Check your connection and try again.")
-      })
+      endSessionInFirebase(target.firebaseId)
+        .then(() => notify(`Your ${target.course} session was ended.`))
+        .catch((error) => {
+          console.error('Could not end session in Firebase', error)
+          notify("Couldn't end the session. Check your connection and try again.")
+        })
       return
     }
     setSessions((prev) => prev.filter((session) => session.id !== sessionId))
@@ -381,13 +398,17 @@ export default function MainApp({
   // host gets a notification.
   function joinSession(sessionId, phone) {
     const target = sessions.find((session) => session.id === sessionId)
-    if (!target || isMember(target, currentUser)) return
+    if (!target) return
+    if (isMember(target, currentUser)) {
+      notify(`You're already in this ${target.course} session.`)
+      return
+    }
     if (isFull(target)) {
       notify('Sorry, that session just filled up.')
       return
     }
     if (live && target.firebaseId) {
-      joinSessionInFirebase(target.firebaseId, { name: currentUser, phone })
+      joinSessionInFirebase(target.firebaseId, { name: currentUser, id: accountId, phone })
         .then(() => notify(`You joined the ${target.course} study session.`))
         .catch((error) => {
           console.error('Could not join session in Firebase', error)
@@ -418,7 +439,7 @@ export default function MainApp({
     if (session.hostPhone) rememberPhone(session.hostPhone)
     // Save to the "sessions" collection in Firebase. While connected, the
     // live listener adds it to the list; otherwise it's kept on this device.
-    saveSessionToFirebase(session)
+    saveSessionToFirebase({ ...session, hostAccount: accountId })
       .then(() => notify(`Your ${session.course} session was saved.`))
       .catch((error) => {
         console.error('Could not save session to Firebase', error)

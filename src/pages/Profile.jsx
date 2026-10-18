@@ -391,10 +391,10 @@ export default function Profile({
                   <span className="row-when">{formatSessionWhen(session.start, session.end)}</span>
                   <span className="row-place">
                     {session.location}
-                    {session.hostName === currentUser ? ' · You are hosting' : ''}
+                    {isHost(session, currentUser) ? ' · You are hosting' : ''}
                   </span>
                 </span>
-                {session.hostName === currentUser && onEnd ? (
+                {isHost(session, currentUser) && onEnd ? (
                   <button
                     type="button"
                     className="leave-btn end-btn"

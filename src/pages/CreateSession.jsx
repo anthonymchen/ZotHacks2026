@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { LOCATIONS, STYLES, MAX_GROUP_SIZE } from '../data'
-import { validateSession, overlaps, describeConflicts, isMember, formatPhone } from '../sessions.js'
+import { validateSession, overlaps, describeConflicts, isMember, isHost, formatPhone } from '../sessions.js'
 import { formatSessionWhen } from '../time'
 import PageBanner from '../components/PageBanner'
 import SessionCard from '../components/SessionCard'
@@ -297,7 +297,7 @@ export default function CreateSession({
                       </span>
                       <span className="schedule-badges">
                         <span className="person-badge you">
-                          {session.hostName === currentUser ? 'Hosting' : 'Joined'}
+                          {isHost(session, currentUser) ? 'Hosting' : 'Joined'}
                         </span>
                         {clash ? <span className="person-badge overlap">Overlaps</span> : null}
                       </span>

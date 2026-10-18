@@ -39,7 +39,7 @@ export default function StudySessions({
   const hosting = byTime(sessions.filter((session) => isHost(session, currentUser)))
   const joined = byTime(
     sessions.filter(
-      (session) => session.attendees.includes(currentUser) && !isHost(session, currentUser),
+      (session) => isMember(session, currentUser) && !isHost(session, currentUser),
     ),
   )
   const mineCount = hosting.length + joined.length

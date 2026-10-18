@@ -34,8 +34,13 @@ export function overlaps(a, b) {
 
 // The host is stored separately from attendees but still counts toward the
 // group size (see headcount).
+// Sessions saved with the host's account are matched by account only, so
+// someone else with the same name never counts as the host. Older sessions
+// and ones kept on this device fall back to the name.
 export function isHost(session, user) {
-  return session.hostName === user || session.ownerName === user || Boolean(session.mine)
+  if (session.mine) return true
+  if (session.hostAccount) return false
+  return session.hostName === user || session.ownerName === user
 }
 
 // People in the session, host included: the host takes one of the spots.
@@ -44,8 +49,11 @@ export function headcount(session) {
 }
 
 // Hosting or joined.
+// Joined by account (memberIds) when the session tracks accounts, otherwise
+// by name.
 export function isMember(session, user) {
-  return isHost(session, user) || session.attendees.includes(user)
+  if (isHost(session, user) || session.joinedByMe) return true
+  return session.attendees.includes(user) && !(session.memberIds && session.hostAccount)
 }
 
 // "math 2b", "MATH 2B" and "Math  2B" are the same course, and everyday
