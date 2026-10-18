@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import Landing from './Landing.jsx'
 import Login from './Login.jsx'
 import Onboarding from './onboarding/Onboarding.jsx'
 import MainApp from './MainApp.jsx'
@@ -20,12 +21,12 @@ function accountFor(signedIn) {
 }
 
 // The main app greets whoever signed in (login page or onboarding) and
-// loads the classes from onboarding. Log Out goes back to the login page.
+// loads the classes from onboarding. Log Out goes back to the login page (/login).
 function MainAppRoute() {
   const navigate = useNavigate()
   const signedIn = getCurrentUser()
   // Only signed-in students who finished onboarding can open the app.
-  if (!signedIn) return <Navigate to="/" replace />
+  if (!signedIn) return <Navigate to="/login" replace />
   if (!isOnboarded(signedIn)) return <Navigate to="/signup" replace />
   const account = accountFor(signedIn)
   const props = { accountId: signedIn.id, account }
@@ -41,7 +42,7 @@ function MainAppRoute() {
       {...props}
       onLogout={() => {
         clearCurrentUser()
-        navigate('/')
+        navigate('/login')
       }}
     />
   )
@@ -51,7 +52,8 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Onboarding />} />
         <Route path="/home" element={<MainAppRoute />} />
       </Routes>
