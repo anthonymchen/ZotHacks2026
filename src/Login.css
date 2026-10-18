@@ -189,3 +189,9 @@
   color: #ffb4ab;
 }
 
+
+/* Greyed out while Google's sign-in script loads or a sign-in is finishing. */
+.login-box .social .social-button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}

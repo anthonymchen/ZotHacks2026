@@ -1,7 +1,7 @@
 import './Login.css'
 import anteater from './anteater-studying.png'
 import { FcGoogle } from 'react-icons/fc'
-import { useGoogleLogin } from '@react-oauth/google'
+import { useGoogleLogin, useGoogleOAuth } from '@react-oauth/google'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { setCurrentUser, getCurrentUser, homeFor } from './currentUser'
@@ -11,6 +11,11 @@ function Login() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loginError, setLoginError] = useState('')
+  const [googleError, setGoogleError] = useState('')
+  const [googleBusy, setGoogleBusy] = useState(false)
+  // Google's sign-in script loads in the background; clicking before it's
+  // ready used to do nothing at all.
+  const { scriptLoadedSuccessfully: googleReady } = useGoogleOAuth()
 
   // There's no account database yet, so a "valid" login means both
   // fields are filled in. Swap this for a real check (e.g. Firebase
@@ -32,7 +37,13 @@ function Login() {
     navigate(homeFor(getCurrentUser()))
   }
   const googleLogin = useGoogleLogin({
+    // Only offer UCI accounts, and always show the account picker so a
+    // personal Gmail that's already signed in isn't chosen automatically.
+    hosted_domain: 'uci.edu',
+    prompt: 'select_account',
     onSuccess: async (tokenResponse) => {
+      setGoogleBusy(true)
+      setGoogleError('')
       try {
         const res = await fetch(
           'https://www.googleapis.com/oauth2/v3/userinfo',
@@ -50,7 +61,7 @@ function Login() {
         const user = await res.json()
 
         if (!user.email?.toLowerCase().endsWith('@uci.edu')) {
-          alert('Please use your UCI email.')
+          setGoogleError(`${user.email} isn't a UCI account. Choose your @uci.edu email.`)
           return
         }
 
@@ -59,10 +70,28 @@ function Login() {
         navigate(homeFor(getCurrentUser()))
       } catch (error) {
         console.error(error)
-        alert('Google login failed')
+        setGoogleError("Couldn't load your Google profile. Check your connection and try again.")
+      } finally {
+        setGoogleBusy(false)
       }
     },
-    onError: () => alert('Google login failed'),
+    // Google turned the sign-in down (for example, access denied).
+    onError: (error) => {
+      console.error('Google sign-in error', error)
+      setGoogleError(error?.error_description || 'Google sign-in failed. Please try again.')
+    },
+    // The pop-up was blocked or closed before finishing. These used to fail
+    // silently, which is why sign-in sometimes seemed to do nothing.
+    onNonOAuthError: (error) => {
+      console.warn('Google sign-in window problem', error)
+      if (error?.type === 'popup_failed_to_open') {
+        setGoogleError('Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.')
+      } else if (error?.type === 'popup_closed') {
+        setGoogleError('The Google sign-in window was closed before you finished. Try again.')
+      } else {
+        setGoogleError('Google sign-in didn\'t finish. Please try again.')
+      }
+    },
   })
 
   return (
@@ -117,11 +146,22 @@ function Login() {
           <button
             type="button"
             className="social-button"
-            onClick={() => googleLogin()}
+            disabled={!googleReady || googleBusy}
+            aria-label={googleReady ? 'Sign in with your UCI Google account' : 'Google sign-in is loading'}
+            title={googleReady ? 'Sign in with your UCI Google account' : 'Google sign-in is loading…'}
+            onClick={() => {
+              setGoogleError('')
+              googleLogin()
+            }}
           >
             <FcGoogle />
           </button>
         </div>
+        {googleError ? (
+          <p className="login-error" role="alert">
+            {googleError}
+          </p>
+        ) : null}
 
         <button type="button" className="signup-button" onClick={() => navigate('/signup')}>
         Sign Up
